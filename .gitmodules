@@ -1,0 +1,3 @@
+[submodule "lantz/drivers/xenics"]
+	path = lantz/drivers/xenics
+	url = git@github.com:vascotenner/lantz_drivers_xenics.git
