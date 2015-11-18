@@ -31,11 +31,23 @@ This command will install a series of packages: pip (used for installation), num
 After this is installed, you should have all the pieces necessary to run the basic functionality of lantz.
 
 # 3. Install other packages using pip #
+
 From the command line, run the command:
 
-   > pip install colorama pyserial pyusb lantz
+    > pip install colorama pyserial pyusb lantz
 
 This command installs the colorama (used for producing colorful terminal output), pyserial (interfacing with serial devices), pyusb(interfacing with usb devices), and lantz (what you're supposedly hoping to install) packages to your Miniconda3 installation.
 
 # 4. Install National Instruments Drivers #
 TODO: write this section!
+
+# 5 . Test your installation #
+From the command prompt, move up a directory into your main Miniconda3 installation folder, then run `python.exe`
+
+This should give you a Python 3.x command prompt!
+
+Now run the command:
+
+    >>> import lantz
+
+This should import the lantz module. If this runs successfully, then you probably have installed lantz correctly.
