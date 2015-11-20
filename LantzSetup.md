@@ -9,14 +9,14 @@ I wrote this as a test file for GitHub before writing any real drivers. This is 
 
 Prerequisites: Don't have Windows 10! (at least not yet...)
 
-# 1. Install Python 3 using Miniconda #
+## 1. Install Python 3 using Miniconda ##
 Install Python 3 using Miniconda. This will create a secondary Python distribution that is separate from other versions of Python that you might already have.
 
 Download Python 3.5 from this link: http://conda.pydata.org/miniconda.html
 
 Install Miniconda3 by following the instructions in the wizard. Make sure to note the directory that you install Miniconda3 to, you will need it for the next step.
 
-# 2. Install some lantz dependencies using conda #
+## 2. Install some lantz dependencies using conda ##
 Open the Windows command prompt.
 
 From the command line, cd to the directory that you installed Miniconda3 to in the previous step. Then enter the Scripts folder. If you list the files, there should be a file conda.exe.
@@ -30,7 +30,7 @@ This command will install a series of packages: pip (used for installation), num
 
 After this is installed, you should have all the pieces necessary to run the basic functionality of lantz.
 
-# 3. Install other packages using pip #
+## 3. Install other packages using pip ##
 
 From the command line, run the command:
 
@@ -38,10 +38,10 @@ From the command line, run the command:
 
 This command installs the colorama (used for producing colorful terminal output), pyserial (interfacing with serial devices), pyusb(interfacing with usb devices), and lantz (what you're supposedly hoping to install) packages to your Miniconda3 installation.
 
-# 4. Install National Instruments Drivers #
+## 4. Install National Instruments Drivers ##
 TODO: write this section!
 
-# 5 . Test your installation #
+## 5 . Test your installation ##
 From the command prompt, move up a directory into your main Miniconda3 installation folder, then run `python.exe`
 
 This should give you a Python 3.x command prompt!
