@@ -74,5 +74,7 @@ First, install the NIDAQmx 15.0.1 software, downloaded from: http://www.ni.com/d
 
 Next, right click on the file you downloaded and select "Run as Administrator". Select a destination folder (change it from the default if you want) to unzip the download files into. This will then start the installation wizard. This might install a bunch of stuff by default, so configure the installation to not install stuff you won't be needing (anything to interface with LabVIEW, for starters =P ).
 
+After the installation wizard completes, you'll need to restart. Windows should recognize your DAQ device after rebooting. From there, you should be able to use the NI Device Manager/Test Panel applications to query the ports on your device.
+
 # 6. Start running Lantz! #
 Stay safe and happy data acquisition!
