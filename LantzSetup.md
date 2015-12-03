@@ -30,6 +30,10 @@ This command will install a series of packages: pip (used for installation), num
 
 After this is installed, you should have all the pieces necessary to run the basic functionality of lantz.
 
+### Possible Issues and Solutions ###
+
+If `pyqt` fails to install, put a copy of `qt.conf` in `Library\Bin`. Thanks to @varses for this tip!
+
 ## 3. Install other packages using pip ##
 
 From the command line, run the command:
@@ -38,10 +42,7 @@ From the command line, run the command:
 
 This command installs the colorama (used for producing colorful terminal output), pyserial (interfacing with serial devices), pyusb(interfacing with usb devices), and lantz (what you're supposedly hoping to install) packages to your Miniconda3 installation.
 
-## 4. Install National Instruments Drivers ##
-TODO: write this section!
-
-## 5 . Test your installation ##
+## 4 . Test your installation ##
 From the command prompt, move up a directory into your main Miniconda3 installation folder, then run `python.exe`
 
 This should give you a Python 3.x command prompt!
@@ -51,3 +52,27 @@ Now run the command:
     >>> import lantz
 
 This should import the lantz module. If this runs successfully, then you probably have installed lantz correctly.
+
+## 5. Install National Instruments Drivers ##
+This seciton will might vary, depending on what NI device(s) you're trying to install, but I've included my setup information here for help.
+
+### 5.1 Installing GPIB Devices ###
+I needed to install NI-488.2 version 15.0.0 for my National Instruments GPIB-USB-HS device (USB to GPIB interface). This package includes the drivers needed to interface with GPIB hardware, including the very useful NIMAX utility.
+
+First, download it from: http://www.ni.com/download/ni-488.2-15.0/5427/en.
+
+Next, right click on the file you downloaded and select "Run as Administrator". Select a destination folder (change it from the default if you want) to unzip the download files into. This will then start the installation wizard. This will install a bunch of stuff by default, so configure the installation to not install stuff you won't be needing (anything to interface with LabVIEW, for starters =P ).
+
+Once the wizard completes, you'll need to restart. I would also recommend installing an NI-488.2 patches that come up from the National Instruments software update.
+
+After doing this, you should be able run NI MAX and see a GPIB device that's connected by clicking on the Scan for Instruments button after selecting your GPIB device.
+
+### 5.2 Installing DAQ Devices ###
+The DAQ I set up was a NI USB-6343.
+
+First, install the NIDAQmx 15.0.1 software, downloaded from: http://www.ni.com/download/ni-daqmx-15.0.1/5353/en.
+
+Next, right click on the file you downloaded and select "Run as Administrator". Select a destination folder (change it from the default if you want) to unzip the download files into. This will then start the installation wizard. This might install a bunch of stuff by default, so configure the installation to not install stuff you won't be needing (anything to interface with LabVIEW, for starters =P ).
+
+# 6. Start running Lantz! #
+Stay safe and happy data acquisition!
