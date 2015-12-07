@@ -7,6 +7,8 @@
 
 from lantz import Feat, Action, DictFeat
 from lantz.messagebased import MessageBasedDriver
+from time import sleep
+
 
 class Lakeshore332(MessageBasedDriver):
     """
@@ -22,15 +24,18 @@ class Lakeshore332(MessageBasedDriver):
 
     # These defaults assume that you have set the IEEE Term setting to: Lf Cr
     DEFAULTS = {'COMMON': {'write_termination': '\n',
-                          'read_termination': ''}}
+                           'read_termination': ''}}
 
     GPIB_name = None
     GPIB_address = -1
 
     channels = ['a', 'b']
+    loops = ['1', '2']
     heater_range_vals = {'off': 0, 'low': 1, 'medium': 2, 'high': 3}
-    heater_status_vals = {'no error':0, 'open load':1, 'short':2}
+    heater_status_vals = {'no error': 0, 'open load': 1, 'short': 2}
     controller_modes = {'local': 0, 'remote': 1, 'remote, local lockout': 2}
+    cmodes = {'manual PID': 1, 'zone': 2, 'open loop': 3, 'AutoTune PID': 4,
+              'AutoTune PI': 5, 'AutoTune P': 6}
 
     T_min = 0
     T_max = 350
@@ -38,41 +43,8 @@ class Lakeshore332(MessageBasedDriver):
     T_min_set = 1.8
     T_max_set = 350
 
-    # def __init__(self, GPIB_name, GPIB_addr, reset=False):
-    #    res_name = GPIB_name + '::' + GPIB_addr + '::INSTR'
-    #    super().__init__(res_name, name='Lakeshore332')
-    #    self._address = res_name
     _verbose = True
 
-    # def query(self, command, *, send_args=(None, None), recv_args=(None, None)):
-    #      answer = super().query(command, send_args=send_args, recv_args=recv_args)
-    #      if answer == 'ERROR':
-    #          raise InstrumentError
-    #          return answer
-
-    #def initialize(self, reset=False):
-    #    """
-    #    Initialization code for Lakeshore 332 should go in this function, since
-    #    if you define functions as @Feats() they cannot be executed in the
-    #    __init__ function.
-    #    """
-        #if (self._verbose):
-            #print('initializing Lakeshore 332...')
-
-        #if reset:
-            #if self._verbose:
-                #print('Resetting...')
-            #self.reset
-        #else:
-            #self.idn()
-            #self.mode()
-
-    # def get_all(self):
-    #    """
-    #    Gets the instrument identification and mode.
-    #    """
-    #    self.idn()
-    #    self.mode()
     @Feat()
     def idn(self):
         """
@@ -83,19 +55,17 @@ class Lakeshore332(MessageBasedDriver):
 
     @Action()
     def reset(self):
-         """
-         Resets the Lakeshore 332 temperature controller.
-         """
-         print("resetting")
-         self.write('*RST')
-         print("reset")
+        """
+        Resets the Lakeshore 332 temperature controller.
+        """
+        self.write('*RST')
 
-    @DictFeat(limits=(T_min,T_max), keys=channels)
+    @DictFeat(limits=(T_min, T_max), keys=channels)
     def kelvin_meas(self, channel):
-          """
-          Returns measured temperature reading from specified channel in Kelvin.
-          """
-          return float(self.query('KRDG?{}'.format(channel)))
+        """
+        Returns measured temperature reading from specified channel in Kelvin.
+        """
+        return float(self.query('KRDG?{}'.format(channel)))
 
     @DictFeat(keys=channels)
     def sensor(self, channel):
@@ -128,6 +98,19 @@ class Lakeshore332(MessageBasedDriver):
         """
         return self.write('RANGE {}'.format(heater_setting))
 
+    @Feat()
+    def heater_output_1(self):
+        """
+        Returns Loop 1 heater output in percent (%).
+        """
+        return float(self.query('HTR?'))
+
+    @Feat()
+    def heater_output_2(self):
+        """
+        Returns Loop 2 heater output in percent (%).
+        """
+        return float(self.query('AOUT?'))
 
     @Feat(values=controller_modes)
     def mode(self):
@@ -146,63 +129,82 @@ class Lakeshore332(MessageBasedDriver):
         """
         return self.query('MODE{}'.format(mode))
 
-    @Feat()
-    def pid(self, channel):
+    @DictFeat(keys=loops)
+    def pid(self, loop):
         """
         Get parameters for PID loop.
         """
-        print('PID loop not yet implemented')
-        return 0
-    #     ans = self.query('PID? {}'.format(channel))
-    #     fields = ans.split(',')
-    #     if len(fields) != 3:
-    #         return None
-    #     fields = [float(f) for f in fields]
-    #     return fields
-    #
-    @pid.setter
-    def pid(self, val, channel):
-         """
-         Get parameters for PID loop
-         """
-         print('This feature is actually unimplemented! Sorry!')
-         return 0
+        return self.query('PID?{}'.format(loop))
 
-    @DictFeat(limits=(T_min_set,T_max_set), keys=channels)
+    @pid.setter
+    def pid(self, loop, pid):
+        """
+        Get parameters for PID loop
+        """
+        p = pid[0]
+        i = pid[1]
+        d = pid[2]
+        return self.query('PID{},{},{},{}'.format(loop, p, i, d))
+
+    @DictFeat(limits=(T_min_set, T_max_set), keys=loops)
     def setpoint(self, channel):
-          """
-          Return the temperature controller setpoint.
-          """
-          return float(self.query('SETP?{}'.format(channel)))
+        """
+        Return the temperature controller setpoint.
+        """
+        return float(self.query('SETP?{}'.format(channel)))
 
     @setpoint.setter
-    def setpoint(self, channel, T_set):
-         """
-         Sets the setpoint of channel channel to value value
-         """
-         print('Error: not implemented correctly')
-         return self.query('SETP{} {}'.format(channel,T_set))
-    #
-    # @Feat()
-    # def mout(self):
-    #     """
-    #     """
-    #     #TODO: actually implement this!
-    #     print('Not yet implemented!')
-    #
-    # @mout.setter
-    # def mout(self, value):
-    #     """
-    #     """
-    #     #TODO: actually implement this!
-    #     print('Not yet implemented!')
-    #
+    def setpoint(self, loop, T_set):
+        """
+        Sets the setpoint of channel channel to value value
+        """
+        self.query('SETP{},{}'.format(loop, T_set))
+        sleep(0.05)
+        return
+
+    @DictFeat(limits=(0, 100), keys=loops)
+    def mout(self, loop):
+        """
+        Returns loop manual heater power output.
+        """
+        return self.query('MOUT?{}'.format(loop))
+
+    @mout.setter
+    def mout(self, loop, percent):
+        """
+        Sets loop manual heater power output in percent.
+        """
+        return self.query('MOUT{},{}'.format(loop, percent))
+
+    @DictFeat(limits=(1, 6, 1), keys=loops)
+    def cmode(self, loop):
+        """
+        Returns controller command mode according to the table:
+        1: Manual PID
+        2: Zone
+        3: Open Loop
+        4: AutoTune PID
+        5: AutoTune PI
+        6: AutoTune P
+        """
+        return self.query('CMODE?{}'.format(loop))
+
+    @cmode.setter
+    def cmode(self, loop, value):
+        """
+        Sets controller command mode according to the table:
+        1: Manual PID
+        2: Zone
+        3: Open Loop
+        4: AutoTune PID
+        5: AutoTune PI
+        6: AutoTune P
+        """
+        return self.query('CMODE{},{}'.format(loop, value))
 
 
 if __name__ == '__main__':
     with Lakeshore332('GPIB0::16::INSTR') as inst:
-        print('Getting instrument identification...')
-        #inst.query('*IDN?')
         print('The instrument identification is ' + inst.idn)
 
         print('resetting...')
@@ -217,10 +219,10 @@ if __name__ == '__main__':
         print('Now the mode is ' + inst.mode + '.')
 
         # Testing Kelvin read functionality
-        print('Current temperature on channel a is ' + str(inst.kelvin_meas['a'])
-        + ' Kelvin')
-        print('Current temperature on channel b is ' + str(inst.kelvin_meas['b'])
-        + ' Kelvin')
+        print('Current temperature on channel a is ' +
+              str(inst.kelvin_meas['a']) + ' Kelvin')
+        print('Current temperature on channel b is ' +
+              str(inst.kelvin_meas['b']) + ' Kelvin')
 
         # Testing sensor reading functionality
         print('Sensor reading on channel a is ' + str(inst.sensor['a']))
@@ -236,11 +238,43 @@ if __name__ == '__main__':
         inst.heater_range = 'off'
         print('Heater range is ' + str(inst.heater_range))
 
-        # Testing setpoint
-        print('Controller a setpoint is ' + str(inst.setpoint['a']))
-        inst.setpoint['a'] = 50
-        print('Controller a channel setpoint is ' + str(inst.setpoint['a']))
-        inst.setpoint['a'] = 300
-        print('Controller a channel setpoint is ' + str(inst.setpoint['a']))
+        # Testing heater output
+        print('Loop 1 heater output ' + str(inst.heater_output_1) + '%')
+        print('Loop 2 heater output ' + str(inst.heater_output_2) + '%')
 
-        print('Controller b setpoint is ' + str(inst.setpoint['b']))
+        # Testing manual output
+        print('Loop 1 manual output ' + str(inst.mout['1']))
+        print('Loop 2 manual output ' + str(inst.mout['2']))
+        inst.mout['1'] = 50
+        inst.mout['2'] = 50
+        print('Loop 1 manual output ' + str(inst.mout['1']))
+        print('Loop 2 manual output ' + str(inst.mout['2']))
+        inst.mout['1'] = 0
+        inst.mout['2'] = 0
+        print('Loop 1 manual output ' + str(inst.mout['1']))
+        print('Loop 2 manual output ' + str(inst.mout['2']))
+
+        # Testing cmode
+        print('Loop 1 Command Mode: ' + str(inst.cmode['1']))
+        inst.cmode['1'] = 3
+        print('Loop 1 Command Mode: ' + str(inst.cmode['1']))
+        inst.cmode['1'] = 1
+        print('Loop 1 Command Mode: ' + str(inst.cmode['1']))
+        print('Loop 2 Command Mode: ' + str(inst.cmode['2']))
+
+        # Testing setpoint
+        inst.setpoint['1'] = 25
+        print('Loop 1 setpoint is ' + str(inst.setpoint['1']))
+        inst.setpoint['1'] = 50
+        print('Loop 1 setpoint is ' + str(inst.setpoint['1']))
+        inst.setpoint['1'] = 300
+        print('Loop 1 setpoint is ' + str(inst.setpoint['1']))
+        inst.setpoint['2'] = 300
+        print('Loop 2 setpoint is ' + str(inst.setpoint['2']))
+
+        # Testing PID
+        inst.pid['1'] = list([10.0, 10.0, 10.0])
+        print('Loop 1 PID parameters:' + str(inst.pid['1']))
+        inst.pid['1'] = list([50.0, 20.0, 1.0])
+        print('Loop 1 PID parameters:' + str(inst.pid['1']))
+        print('Loop 2 PID parameters:' + str(inst.pid['2']))
