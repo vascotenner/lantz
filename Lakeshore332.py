@@ -35,21 +35,14 @@ class Lakeshore332(MessageBasedDriver):
     T_min = 0
     T_max = 350
 
+    T_min_set = 1.8
+    T_max_set = 350
+
     # def __init__(self, GPIB_name, GPIB_addr, reset=False):
     #    res_name = GPIB_name + '::' + GPIB_addr + '::INSTR'
     #    super().__init__(res_name, name='Lakeshore332')
     #    self._address = res_name
     _verbose = True
-    #    self._idn = None
-    #
-    #    print(res_name)
-    #
-    #    print(self.channel_list)
-    #    print(self.heater_range_vals)
-    #    print(self.heater_status_vals)
-    #    print(self.controller_modes)
-
-
 
     # def query(self, command, *, send_args=(None, None), recv_args=(None, None)):
     #      answer = super().query(command, send_args=send_args, recv_args=recv_args)
@@ -152,15 +145,14 @@ class Lakeshore332(MessageBasedDriver):
         remote, local lockout (2)
         """
         return self.query('MODE{}'.format(mode))
-    #
-    # def local(self):
-    #     self.set_mode('local')
-    #
-    # def remote(self):
-    #     self.set_mode('remote')
-    #
-    # @Feat()
-    # def pid(self, channel):
+
+    @Feat()
+    def pid(self, channel):
+        """
+        Get parameters for PID loop.
+        """
+        print('PID loop not yet implemented')
+        return 0
     #     ans = self.query('PID? {}'.format(channel))
     #     fields = ans.split(',')
     #     if len(fields) != 3:
@@ -168,30 +160,28 @@ class Lakeshore332(MessageBasedDriver):
     #     fields = [float(f) for f in fields]
     #     return fields
     #
-    # @pid.setter
-    # def pid(self, val, channel):
-    #     """
-    #     Need to actually implement this!
-    #     """
-    #     print('This feature is actually unimplemented! Sorry!')
-    #
-    # @Feat()
-    # def setpoint(self, channel):
-    #     """
-    #     Return the feedback controller's setpoint.
-    #     """
-    #     if channel in self.channel_list:
-    #         return self.query('SETP?{}'.format(channel))
-    #     else:
-    #         return None
-    #
-    # @setpoint.setter
-    # def setpoint(self, channel, value):
-    #     """
-    #     Sets the setpoint of channel channel to value value
-    #     """
-    #     #TODO: actually implement this!
-    #     print('Not yet implemented!')
+    @pid.setter
+    def pid(self, val, channel):
+         """
+         Get parameters for PID loop
+         """
+         print('This feature is actually unimplemented! Sorry!')
+         return 0
+
+    @DictFeat(limits=(T_min_set,T_max_set), keys=channels)
+    def setpoint(self, channel):
+          """
+          Return the temperature controller setpoint.
+          """
+          return float(self.query('SETP?{}'.format(channel)))
+
+    @setpoint.setter
+    def setpoint(self, channel, T_set):
+         """
+         Sets the setpoint of channel channel to value value
+         """
+         print('Error: not implemented correctly')
+         return self.query('SETP{} {}'.format(channel,T_set))
     #
     # @Feat()
     # def mout(self):
@@ -245,3 +235,12 @@ if __name__ == '__main__':
         print('Heater range is ' + str(inst.heater_range))
         inst.heater_range = 'off'
         print('Heater range is ' + str(inst.heater_range))
+
+        # Testing setpoint
+        print('Controller a setpoint is ' + str(inst.setpoint['a']))
+        inst.setpoint['a'] = 50
+        print('Controller a channel setpoint is ' + str(inst.setpoint['a']))
+        inst.setpoint['a'] = 300
+        print('Controller a channel setpoint is ' + str(inst.setpoint['a']))
+
+        print('Controller b setpoint is ' + str(inst.setpoint['b']))
