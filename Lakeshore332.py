@@ -27,10 +27,13 @@ class Lakeshore332(MessageBasedDriver):
     GPIB_name = None
     GPIB_address = -1
 
-    channel_list = ['A','B']
+    channels = ['a', 'b']
     heater_range_vals = {'off': 0, 'low': 1, 'medium': 2, 'high': 3}
     heater_status_vals = {'no error':0, 'open load':1, 'short':2}
     controller_modes = {'local': 0, 'remote': 1, 'remote, local lockout': 2}
+
+    T_min = 0
+    T_max = 350
 
     # def __init__(self, GPIB_name, GPIB_addr, reset=False):
     #    res_name = GPIB_name + '::' + GPIB_addr + '::INSTR'
@@ -94,78 +97,45 @@ class Lakeshore332(MessageBasedDriver):
          self.write('*RST')
          print("reset")
 
-    # @Feat()
-    # def kelvin(self, channel):
-    #      """
-    #      Returns temperature reading from specified channel in Kelvin.
-    #      """
-    #      if channel in channel_list:
-    #          return self.query('KRDG?{}'.format(channel))
-    #      else:
-    #          print('Error: invalid channel')
-    #          return None
-    #
-    # @Feat()
-    # def get_sensor(self, channel):
-    #     """
-    #     Returns sensor reading from specified channel.
-    #     """
-    #     if channel in channel_list:
-    #         msg_str = 'SRDG?' + channel
-    #         return self.query(msg_str.format(channel))
-    #     else:
-    #         print('Error: invalid channel')
-    #         return None
-    #
-    # #@Feat(values = self.heater_status_vals)
-    # @Feat()
-    # def get_heater_status(self):
-    #     """
-    #     Returns the heater status.
-    #     """
-    #     ans = self.query('HTRST?')
-    #     if self._verbose:
-    #         if ans == '0':
-    #             print('Heater status: no error')
-    #         elif ans == '1':
-    #             print('Heater status: open load')
-    #         elif ans == '2':
-    #             print('Heater status: short')
-    #         else:
-    #             print('Error: Heater status invalid')
-    #     return ans
-    #
-    # #@Feat(values=self.heater_range_vals)
-    # @Feat()
-    # def heater_range(self):
-    #     """
-    #     Queries the instrument, prints a message describing the current heater
-    #     range setting, then returns the heater range value.
-    #     """
-    #     ans = self.query('RANGE?')
-    #     if self._verbose:
-    #         if ans == '0':
-    #             print('Heater range: off')
-    #         elif ans == '1':
-    #             print('Heater range: low')
-    #         elif ans == '2':
-    #             print('Heater range: medium')
-    #         elif ans == '3':
-    #             print('Heater range: high')
-    #         else:
-    #             print('Error: Heater not responding correctly')
-    #     return ans
-    #
-    # @heater_range.setter
-    # def heater_range(self, heater_setting):
-    #     """
-    #     Sets heater range to  heater_setting.
-    #
-    #     heater_setting must be an integer between 0 and 3 inclusive.
-    #     """
-    #     return self.write('RANGE {}'.format(heater_setting))
-    #
-    #
+    @DictFeat(limits=(T_min,T_max), keys=channels)
+    def kelvin_meas(self, channel):
+          """
+          Returns measured temperature reading from specified channel in Kelvin.
+          """
+          return float(self.query('KRDG?{}'.format(channel)))
+
+    @DictFeat(keys=channels)
+    def sensor(self, channel):
+        """
+        Returns sensor reading from specified channel.
+        """
+        return float(self.query('SRDG?{}'.format(channel)))
+
+    @Feat(values=heater_status_vals)
+    def heater_status(self):
+        """
+        Returns the heater status.
+        """
+        return int(self.query('HTRST?'))
+
+    @Feat(values=heater_range_vals)
+    def heater_range(self):
+        """
+        Queries the instrument, prints a message describing the current heater
+        range setting, then returns the heater range value.
+        """
+        return int(self.query('RANGE?'))
+
+    @heater_range.setter
+    def heater_range(self, heater_setting):
+        """
+        Sets heater range to  heater_setting.
+
+        heater_setting must be an integer between 0 and 3 inclusive.
+        """
+        return self.write('RANGE {}'.format(heater_setting))
+
+
     @Feat(values=controller_modes)
     def mode(self):
         """
@@ -237,38 +207,41 @@ class Lakeshore332(MessageBasedDriver):
     #     #TODO: actually implement this!
     #     print('Not yet implemented!')
     #
-    # @Feat()
-    # def cmd_mode(self):
-    #     """
-    #     """
-    #     #TODO: actually implement this!
-    #     print('Not yet implemented!')
-    #
-    # @cmd_mode.setter
-    # def cmd_mode(self, value):
-    #     """
-    #     """
-    #     #TODO: implement this!
-    #     print('Not yet implemented!')
-    #
-    #
-    #
-    #
-    #
+
 
 if __name__ == '__main__':
     with Lakeshore332('GPIB0::16::INSTR') as inst:
         print('Getting instrument identification...')
         #inst.query('*IDN?')
         print('The instrument identification is ' + inst.idn)
-        print('reset?')
+
+        print('resetting...')
         inst.reset
         print('reset.')
+
+        # Testing mode switching functionality
         print('The current mode is ' + inst.mode + '.')
-        print(inst.controller_modes)
         inst.mode = 'remote, local lockout'
         print('Now the mode is ' + inst.mode + '.')
         inst.mode = 'remote'
         print('Now the mode is ' + inst.mode + '.')
-        #print('The current temperature is '+ inst.kelvin(channel='A'))
-        #inst.initialize(reset=False)
+
+        # Testing Kelvin read functionality
+        print('Current temperature on channel a is ' + str(inst.kelvin_meas['a'])
+        + ' Kelvin')
+        print('Current temperature on channel b is ' + str(inst.kelvin_meas['b'])
+        + ' Kelvin')
+
+        # Testing sensor reading functionality
+        print('Sensor reading on channel a is ' + str(inst.sensor['a']))
+        print('Sensor reading on channel b is ' + str(inst.sensor['b']))
+
+        # Testing heater status
+        print('Heater status is ' + str(inst.heater_status))
+
+        # Testing heater range
+        print('Heater range is ' + str(inst.heater_range))
+        inst.heater_range = 'low'
+        print('Heater range is ' + str(inst.heater_range))
+        inst.heater_range = 'off'
+        print('Heater range is ' + str(inst.heater_range))
