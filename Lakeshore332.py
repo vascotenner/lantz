@@ -176,29 +176,29 @@ class Lakeshore332(MessageBasedDriver):
         """
         return self.query('MOUT{},{}'.format(loop, percent))
 
-    @DictFeat(limits=(1, 6, 1), keys=loops)
+    @DictFeat(values=cmodes, keys=loops)
     def cmode(self, loop):
         """
-        Returns controller command mode according to the table:
-        1: Manual PID
-        2: Zone
-        3: Open Loop
-        4: AutoTune PID
-        5: AutoTune PI
-        6: AutoTune P
+        Returns the control mode according to the following table.
+        'manual PID' (1)
+        'zone'(2)
+        'open loop' (3)
+        'AutoTune PID' (4)
+        'AutoTune PI' (5)
+        'AutoTune P' (6)
         """
-        return self.query('CMODE?{}'.format(loop))
+        return int(self.query('CMODE?{}'.format(loop)))
 
     @cmode.setter
     def cmode(self, loop, value):
         """
-        Sets controller command mode according to the table:
-        1: Manual PID
-        2: Zone
-        3: Open Loop
-        4: AutoTune PID
-        5: AutoTune PI
-        6: AutoTune P
+        Sets the control mode according to the following table.
+        'manual PID' (1)
+        'zone'(2)
+        'open loop' (3)
+        'AutoTune PID' (4)
+        'AutoTune PI' (5)
+        'AutoTune P' (6)
         """
         return self.query('CMODE{},{}'.format(loop, value))
 
@@ -256,9 +256,9 @@ if __name__ == '__main__':
 
         # Testing cmode
         print('Loop 1 Command Mode: ' + str(inst.cmode['1']))
-        inst.cmode['1'] = 3
+        inst.cmode['1'] = 'open loop'
         print('Loop 1 Command Mode: ' + str(inst.cmode['1']))
-        inst.cmode['1'] = 1
+        inst.cmode['1'] = 'AutoTune P'
         print('Loop 1 Command Mode: ' + str(inst.cmode['1']))
         print('Loop 2 Command Mode: ' + str(inst.cmode['2']))
 
