@@ -166,6 +166,14 @@ class SignalRecovery7265(MessageBasedDriver):
         read = self.query('MP.')
         return [float(x) for x in read.replace('\x00', '').split(',')]
 
+    @Action()
+    def autophase(self):
+        """
+        Adds an offset to the phase of the lockin to minimize the y-channel
+        signal and maximize the x-channel signal.
+        """
+        return self.write('AQN')
+
     @Feat(limits=(0, 29, 1))
     def time_constant_integer(self):
         """
@@ -297,6 +305,9 @@ if __name__ == '__main__':
 
         print('Testing full quadrature readings')
         print('X,Y: {}V'.format(list(inst.xy)))
+        print('Magnitude, Phase: {}'.format(list(inst.mag_phase)))
+        inst.autophase
+        sleep(2)
         print('Magnitude, Phase: {}'.format(list(inst.mag_phase)))
 
         print('Testing frequency code')
