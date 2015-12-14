@@ -40,5 +40,7 @@ python DAQ_demo.py 'dev1/ai0'
 ```
 where 'dev1' is your DAQ device name and 'ai0' is the analog input channel you want to read.
 
+`DAQ_blit.py` is a demo of sampling from the DAQ and live plotting the data w/ matplotlib.
+
 ## More Advanced Testing ##
 Currently working on a more advanced test script to demonstrate some more advanced features of the DAQ.
