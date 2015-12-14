@@ -38,11 +38,8 @@ if __name__ == '__main__':
         print(' - Is Simulated: {}'.format(value.is_simulated))
         print(' - Product Type: {}'.format(value.product_type))
         print(' - Product Number: {}'.format(value.product_number))
-        print(' - Product Type: {}'.format(value.product_type))
         print(' - Serial Number: {}'.format(value.serial_number))
         print(' - Bus Info: {}'.format(value.bus_info))
-        bulleted_list('AI Channels', value.analog_input_channels,
-                      details=args.list)
         bulleted_list('AI Channels', value.analog_input_channels,
                       details=args.list)
         bulleted_list('AO Channels', value.analog_output_channels,
