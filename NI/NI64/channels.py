@@ -120,6 +120,8 @@ class VoltageOutputChannel(Channel):
 
         super().__init__(task=task, name=name)
 
+
+
 # Not implemented:
 # DAQmxCreateAIAccelChan, DAQmxCreateAICurrentChan, DAQmxCreateAIFreqVoltageChan,
 # DAQmxCreateAIMicrophoneChan, DAQmxCreateAIResistanceChan, DAQmxCreateAIRTDChan,

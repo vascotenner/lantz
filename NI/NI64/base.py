@@ -422,6 +422,13 @@ class Task(_Base):
         names = tuple(n.strip() for n in buf.split(',') if n.strip())
         return names
 
+    def number_of_channels(self):
+        """Returns the number of virtual channels in the task.
+        """
+        err, buf = self.lib.GetTaskChannels(*RetStr(default_buf_size))
+        names = tuple(n.strip() for n in buf.split(',') if n.strip())
+        return len(names)
+
     def _device_names(self):
         """Return a tuple with the names of all devices in the task.
         """
