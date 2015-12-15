@@ -17,18 +17,19 @@ t0 = time.clock()
 xar = []
 yar0 = []
 yar1 = []
-print(task.read(samples_per_channel=1, timeout=10.0, group_by='scan'))
 
-# def animate(i):
-#     xar.append(time.clock()-t0)
-#     yar0.append(task.read)
-#     ax1.clear()
-#     ax1.plot(xar, yar0, 'bo')
-#     ax1.plot(xar, yar1, 'ro')
-#     plt.xlabel('Time (s)')
-#     plt.ylabel('Voltage (V)')
-# ani = animation.FuncAnimation(fig, animate, interval=10)
-#
-# plt.show()
-#
-# task.stop()
+def animate(i):
+    xar.append(time.clock()-t0)
+    vals = task.read(samples_per_channel=1, timeout=10.0, group_by='scan')
+    yar0.append(vals[0][0])
+    yar1.append(vals[0][1])
+    ax1.clear()
+    ax1.plot(xar, yar0, 'bo')
+    ax1.plot(xar, yar1, 'ro')
+    plt.xlabel('Time (s)')
+    plt.ylabel('Voltage (V)')
+ani = animation.FuncAnimation(fig, animate, interval=10)
+
+plt.show()
+
+task.stop()

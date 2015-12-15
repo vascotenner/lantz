@@ -9,6 +9,7 @@ from lantz import Feat, DictFeat, Action
 
 from numpy import abs, ceil, pi, linspace, cos, ones
 
+
 class Newport_FSM(System):
     """
     Class for controlling Newport FSM using National Instruments DAQ.
@@ -113,16 +114,16 @@ class Newport_FSM(System):
         """
         Returns micron position corresponding to channel voltage.
         """
-        um = V*self.fsm_dimensions[dim]['micron_per_volt'] + (
-             self.fsm_dimensions[dim]['origin'])
+        um = V * self.fsm_dimensions[dim]['micron_per_volt'] + (
+            self.fsm_dimensions[dim]['origin'])
         return um
 
     def convert_um_to_V(self, dim, um):
         """
         Returns voltage corresponding to micron position.
         """
-        V = (um - self.fsm_dimensions[dim]['origin'])/(
-             self.fsm_dimensions[dim]['micron_per_volt'])
+        V = (um - self.fsm_dimensions[dim]['origin']) / (
+            self.fsm_dimensions[dim]['micron_per_volt'])
         return V
 
     def set_V_to_zero(self):
@@ -144,10 +145,10 @@ class Newport_FSM(System):
         v_init = self.convert_um_to_V(x_init, channel)
         v_final = self.convert_un_to_V(x_final, channel)
 
-        n_steps = ceil(abs(v_final-v_init)*ao_smooth_steps_per_volt)
+        n_steps = ceil(abs(v_final - v_init) * ao_smooth_steps_per_volt)
 
-        v_data = v_init*ones(n_steps) + (v_final - v_init) * (1.0 - cos(
-                 linspace(0, pi, n_steps)/2.0))
+        v_data = v_init * ones(n_steps) + (v_final - v_init) * (1.0 - cos(
+            linspace(0, pi, n_steps) / 2.0))
 
         print(v_data)
 
