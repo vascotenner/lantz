@@ -15,9 +15,6 @@ from lantz.errors import InstrumentError
 from lantz.foreign import LibraryDriver, RetValue, RetStr
 
 from .constants import Constants, Types
-from ctypes import cast
-
-from time import sleep
 
 default_buf_size = 2048
 
