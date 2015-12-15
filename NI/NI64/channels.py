@@ -73,10 +73,10 @@ class VoltageInputChannel(Channel):
     def __init__(self, phys_channel, name='', terminal='default',
                  min_max=(-10., 10.), units='volts', task=None):
 
-        terminal_val = self.terminal_map[terminal]
-
         if not name:
             name = ''#phys_channel
+
+        terminal_val = self.terminal_map[terminal]
 
         if units != 'volts':
             custom_scale_name = units
@@ -100,25 +100,19 @@ class VoltageOutputChannel(Channel):
 
     CHANNEL_TYPE = 'AO'
 
-    CREATE_FUN = 'CreateAOVoltageChan'
+    def __init__(self, phys_channel, channel_name='', terminal='default', min_max=(-1, -1), units='volts'):
 
-    def __init__(self, phys_channel, name='', min_max=(-10., 10.),
-                 units='volts', task=None):
-
-        if not name:
-            name = ''  # phys_channel
+        terminal_val = self.terminal_map[terminal]
 
         if units != 'volts':
             custom_scale_name = units
-            units = Constants.Val_FromCustomScale
+            units = Constants.FROM_CUSTOM_SCALE
         else:
             custom_scale_name = None
-            units = Constants.Val_Volts
+            units =  Constants.VOLTS
 
-        self._create_args = (phys_channel, name, min_max[0], min_max[1], units,
-                             custom_scale_name)
-
-        super().__init__(task=task, name=name)
+        err = self.lib.CreateAOVoltageChan(phys_channel, channel_name,
+                                           min_max[0], min_max[1], units, custom_scale_name)
 
 # Not implemented:
 # DAQmxCreateAIAccelChan, DAQmxCreateAICurrentChan, DAQmxCreateAIFreqVoltageChan,
