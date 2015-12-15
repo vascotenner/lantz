@@ -98,14 +98,14 @@ class Lakeshore332(MessageBasedDriver):
         """
         return self.write('RANGE {}'.format(heater_setting))
 
-    @Feat(limits=(0., 100.))
+    @Feat()
     def heater_output_1(self):
         """
         Returns Loop 1 heater output in percent (%).
         """
         return float(self.query('HTR?'))
 
-    @Feat(limits=(0., 100.))
+    @Feat()
     def heater_output_2(self):
         """
         Returns Loop 2 heater output in percent (%).

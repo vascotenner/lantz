@@ -149,11 +149,9 @@ class AnalogOutputTask(Task):
 
     CHANNEL_TYPE = 'AO'
 
-
     @Action(units=(None, None, 'seconds', None), values=(None, None, None, _GROUP_BY))
     def write(self, data, auto_start=True, timeout=10.0, group_by='scan'):
-        """
-        Write multiple floating-point samples or a scalar to a task
+        """Write multiple floating-point samples or a scalar to a task
         that contains one or more analog output channels.
 
         Note: If you configured timing for your task, your write is
@@ -202,7 +200,7 @@ class AnalogOutputTask(Task):
 
         number_of_channels = self.number_of_channels()
 
-        if data.ndim == 1:
+        if data.ndims == 1:
             if number_of_channels == 1:
                 samples_per_channel = data.shape[0]
                 shape = (samples_per_channel, 1)
