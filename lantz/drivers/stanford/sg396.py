@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-# -*- coding: utf-8 -*-
 """
     lantz.drivers.stanford.sg396
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -34,7 +33,7 @@ class SG396(MessageBasedDriver):
 
         @lf_amplitude.setter
         def lf_amplitude(self, value):
-            self.send('AMPL{:.2f}'.format(value))
+            self.write('AMPL{:.2f}'.format(value))
 
         @Feat(units='V')
         def rf_amplitude(self):
@@ -45,7 +44,7 @@ class SG396(MessageBasedDriver):
 
         @rf_amplitude.setter
         def rf_amplitude(self, value):
-            self.send('AMPR{:.2f}'.format(value))
+            self.write('AMPR{:.2f}'.format(value))
 
         @Feat(values={True: '1', False: '0'})
         def lf_toggle(self):
@@ -56,7 +55,7 @@ class SG396(MessageBasedDriver):
 
         @lf_toggle.setter
         def lf_toggle(self, value):
-            self.send('ENBL{:d}'.format(value))
+            self.write('ENBL{:s}'.format(value))
 
         @Feat(values={True: '1', False: '0'})
         def rf_toggle(self):
@@ -67,7 +66,7 @@ class SG396(MessageBasedDriver):
 
         @rf_toggle.setter
         def rf_toggle(self, value):
-            self.send('ENBR{:d}'.format(value))
+            self.write('ENBR{:s}'.format(value))
 
         @Feat(units='Hz')
         def frequency(self):
@@ -78,7 +77,7 @@ class SG396(MessageBasedDriver):
 
         @frequency.setter
         def frequency(self, value):
-            self.send('FREQ{:.2f}'.format(value))
+            self.write('FREQ{:.2f}'.format(value))
 
         @Feat()
         def rf_pll_loop_filter_mode(self):
@@ -97,22 +96,22 @@ class SG396(MessageBasedDriver):
 
         @lf_offset.setter
         def lf_offset(self, value):
-            self.send('OFSL{:.2f}'.format(value))
+            self.write('OFSL{:.2f}'.format(value))
 
-        @Feat()
+        @Feat(units='degrees')
         def phase(self):
             """
             carrier phase
             """
-            self.query('PHAS?')
+            return self.query('PHAS?')
 
         @phase.setter
         def phase(self, value):
-            self.send('PHAS{:.2f}'.format(value))
+            self.write('PHAS{:.2f}'.format(value))
 
         @Action()
         def rel_phase(self):
             """
             sets carrier phase to 0 degrees
             """
-            self.send('RPHS')
+            self.write('RPHS')
