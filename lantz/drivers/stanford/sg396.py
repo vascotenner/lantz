@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """
     lantz.drivers.stanford.sg396
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -17,14 +18,14 @@ class SG396(MessageBasedDriver):
 
         DEFAULTS = {
             'COMMON': {
-                'write_termination': '\n',
-                'read_termination': '\n',
+                'write_termination': '\r\n',
+                'read_termination': '\r\n',
             }
         }
 
         # Signal synthesis commands
 
-        @Feat()
+        @Feat(units='V')
         def lf_amplitude(self):
             """
             low frequency amplitude (BNC output)
@@ -35,7 +36,7 @@ class SG396(MessageBasedDriver):
         def lf_amplitude(self, value):
             self.send('AMPL{:.2f}'.format(value))
 
-        @Feat()
+        @Feat(units='V')
         def rf_amplitude(self):
             """
             RF amplitude (Type N output)
@@ -46,29 +47,29 @@ class SG396(MessageBasedDriver):
         def rf_amplitude(self, value):
             self.send('AMPR{:.2f}'.format(value))
 
-        @Feat(values={True: 1, False: 0})
+        @Feat(values={True: '1', False: '0'})
         def lf_toggle(self):
             """
             low frequency output state
             """
             return self.query('ENBL?')
 
-        @lf_enable.setter
+        @lf_toggle.setter
         def lf_toggle(self, value):
             self.send('ENBL{:d}'.format(value))
 
-        @Feat(values={True: 1, False: 0})
+        @Feat(values={True: '1', False: '0'})
         def rf_toggle(self):
             """
             RF output state
             """
             return self.query('ENBR?')
 
-        @rf_enable.setter
+        @rf_toggle.setter
         def rf_toggle(self, value):
             self.send('ENBR{:d}'.format(value))
 
-        @Feat()
+        @Feat(units='Hz')
         def frequency(self):
             """
             signal frequency
