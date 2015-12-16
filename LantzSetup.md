@@ -34,13 +34,30 @@ After this is installed, you should have all the pieces necessary to run the bas
 
 If `pyqt` fails to install, put a copy of `qt.conf` in `Library\Bin`. Thanks to @varses for this tip!
 
-## 3. Install other packages using pip ##
+## 3a. Install other packages using pip ##
 
 From the command line, run the command:
 
     > pip install colorama pyserial pyusb lantz
 
 This command installs the colorama (used for producing colorful terminal output), pyserial (interfacing with serial devices), pyusb(interfacing with usb devices), and lantz (what you're supposedly hoping to install) packages to your Miniconda3 installation.
+
+## 3b. Install awsch/lantz instead of the official Lantz release
+
+For those interested in using custom drivers in the group's modified release, this step will allow pip to install a version of Lantz that is synced with the group Github.
+
+Git is a prequisite for this step. Obtain it here: https://git-scm.com/download/win
+
+Once installed, navigate to the location where you would like to have the group's modified Lantz release reside. Then, run:
+
+    > git clone https://github.com/awsch/lantz.git
+    > cd lantz
+    > pip uninstall lantz :: let's remove the old version to ensure no collisions occur
+    > pip install -e .
+    
+Changes made on Github, however, will not be automatically synced with your local clone of Lantz. To perform a sync, navigate to this directory and perform:
+
+    > git pull origin master
 
 ## 4 . Test your installation ##
 From the command prompt, move up a directory into your main Miniconda3 installation folder, then run `python.exe`
