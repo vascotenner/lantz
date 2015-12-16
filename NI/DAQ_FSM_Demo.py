@@ -7,6 +7,8 @@ from lantz.drivers.ni.daqmx import AnalogOutputTask, VoltageOutputChannel
 
 from lantz import Feat, DictFeat, Action
 
+import numpy as np
+
 from numpy import abs, ceil, pi, linspace, cos, ones
 
 
@@ -47,11 +49,13 @@ class Newport_FSM(System):
             chan = VoltageOutputChannel(phys_chan, name=chan_name,
                                         min_max=(V_min, V_max), units='volts',
                                         task=self.task)
+
+
         self.task.start()
 
         from numpy.random import randn
 
-        data = randn(1000, 1000)
+        data = randn(1, 1000)
 
         self.task.write(data, auto_start=False, timeout=10.0, group_by='scan')
 
@@ -118,7 +122,7 @@ class Newport_FSM(System):
             self.fsm_dimensions[dim]['origin'])
         return um
 
-    def convert_um_to_V(self, dim, um):
+    def convert_um_to_V(self, um, dim):
         """
         Returns voltage corresponding to micron position.
         """
@@ -130,8 +134,9 @@ class Newport_FSM(System):
         """
         Sets output voltages to 0.
         """
+        self.abs_position_pair = (self.convert_V_to_um(0, 'x'),
+                                  self.convert_V_to_um(0, 'y'))
 
-    @Action()
     def ao_smooth(self, x_init, x_final, channel):
         """
         Smooths output of DAQ to avoid hysteresis w/ moving FSM mirror.
@@ -143,15 +148,33 @@ class Newport_FSM(System):
         ao_smooth_steps_per_volt = 1000.0  # steps/V
 
         v_init = self.convert_um_to_V(x_init, channel)
-        v_final = self.convert_un_to_V(x_final, channel)
+        v_final = self.convert_um_to_V(x_final, channel)
 
         n_steps = ceil(abs(v_final - v_init) * ao_smooth_steps_per_volt)
 
         v_data = v_init * ones(n_steps) + (v_final - v_init) * (1.0 - cos(
-            linspace(0, pi, n_steps) / 2.0))
+            linspace(0.0, pi, n_steps))) / 2.0
 
         print(v_data)
+        print(v_data.size)
+        if channel == 'x':
+            v_data = np.vstack((v_data, np.zeros(v_data.size)))
+        else:
+            v_data = np.vstack((np.zeros(v_data.size), v_data))
+
+
+
+        self.task.write(v_data, auto_start=False, timeout=10.0,
+                        group_by='channel')
 
 if __name__ == '__main__':
     with Newport_FSM() as inst:
         print('testing!')
+
+        inst.ao_smooth(-5.0, 5.0, 'x')
+        inst.ao_smooth(5.0, -25.0, 'x')
+        inst.ao_smooth(-25.0, 25.0, 'x')
+
+        inst.ao_smooth(-5.0, 5.0, 'y')
+        inst.ao_smooth(5.0, -25.0, 'y')
+        inst.ao_smooth(-25.0, 25.0, 'y')

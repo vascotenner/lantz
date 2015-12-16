@@ -127,18 +127,22 @@ class AnalogInputTask(Task):
 
         number_of_channels = self.number_of_channels()
         if group_by == Constants.Val_GroupByScanNumber:
-            data = np.zeros((samples_per_channel, number_of_channels), dtype=np.float64)
+            data = np.zeros((samples_per_channel, number_of_channels),
+                            dtype=np.float64)
         else:
-            data = np.zeros((number_of_channels, samples_per_channel), dtype=np.float64)
+            data = np.zeros((number_of_channels, samples_per_channel),
+                            dtype=np.float64)
 
-        err, data, count = self.lib.ReadAnalogF64(samples_per_channel, timeout, group_by,
-                                                  data.ctypes.data, data.size, RetValue('i32'), None)
+        err, count = self.lib.ReadAnalogF64(samples_per_channel, timeout,
+                                            group_by, data.ctypes.data,
+                                            data.size, RetValue('i32'),
+                                            None)
 
         if samples_per_channel < count:
             if group_by == 'scan':
                 return data[:count]
             else:
-                return data[:,:count]
+                return data[:, :count]
 
         return data
 

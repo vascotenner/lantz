@@ -18,6 +18,7 @@ xar = []
 yar0 = []
 yar1 = []
 
+
 def animate(i):
     xar.append(time.clock()-t0)
     vals = task.read(samples_per_channel=1, timeout=10.0, group_by='scan')
@@ -28,6 +29,7 @@ def animate(i):
     ax1.plot(xar, yar1, 'ro')
     plt.xlabel('Time (s)')
     plt.ylabel('Voltage (V)')
+
 ani = animation.FuncAnimation(fig, animate, interval=10)
 
 plt.show()

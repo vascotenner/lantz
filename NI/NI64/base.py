@@ -857,7 +857,7 @@ class Task(_Base):
             source = None
         self.samples_per_channel = samples_per_channel
         self.sample_mode = sample_mode
-        self.lib.CfgSampClkTiming(source, float64(rate), active_edge, sample_mode, samples_per_channel)
+        self.lib.CfgSampClkTiming(source, rate, active_edge, sample_mode, samples_per_channel)
 
     def configure_timing_burst_handshaking_export_clock(self, *args, **kws):
         """
