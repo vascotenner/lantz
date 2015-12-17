@@ -13,6 +13,8 @@
 from lantz import Action, Feat
 from lantz.messagebased import MessageBasedDriver
 
+from pyvisa.constants import Parity, StopBits
+
 class Agilis(MessageBasedDriver):
 
     DEFAULTS = {
@@ -20,6 +22,8 @@ class Agilis(MessageBasedDriver):
             'write_termination': '\r\n',
             'read_termination': '\r\n',
             'baud_rate': 921600,
+            'parity': Parity.none,
+            'stop_bits': StopBits.one,
         }
     }
 
