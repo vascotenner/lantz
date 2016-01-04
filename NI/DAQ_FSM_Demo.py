@@ -9,7 +9,9 @@ from lantz import Feat, DictFeat, Action
 
 import numpy as np
 
-from numpy import abs, ceil, pi, linspace, cos, ones
+from numpy import abs, ceil, pi, linspace, cos, ones, size
+
+from time import sleep
 
 
 class Newport_FSM(System):
@@ -51,15 +53,6 @@ class Newport_FSM(System):
                                         task=self.task)
 
 
-        self.task.start()
-
-        from numpy.random import randn
-
-        data = randn(1, 1000)
-
-        self.task.write(data, auto_start=False, timeout=10.0, group_by='scan')
-
-        print('Task started!')
 
     def finalize(self):
         """
@@ -98,22 +91,6 @@ class Newport_FSM(System):
         """
         return 0
 
-    # @Feat()
-    # def scan_speed(self):
-    #     """
-    #     Returns current FSM scan speed in V/s.
-    #     """
-    #     print('Bold faced lie')
-    #     return 0
-    #
-    # @scan_speed.setter
-    # def scan_speed(self, speed):
-    #     """
-    #     Sets the current scan speed of the analog output in V/s.
-    #     """
-    #     print('Bold faced lie')
-    #     return 0
-
     def convert_V_to_um(self, dime, V):
         """
         Returns micron position corresponding to channel voltage.
@@ -144,7 +121,7 @@ class Newport_FSM(System):
         Copy of dchristle's algorithm. (I know what you're trying to do, and
         just stop.)
         """
-        ao_smooth_rate = 50000.0  # Hz
+        ao_smooth_rate = 5000.0  # Hz
         ao_smooth_steps_per_volt = 1000.0  # steps/V
 
         v_init = self.convert_um_to_V(x_init, channel)
@@ -155,6 +132,8 @@ class Newport_FSM(System):
         v_data = v_init * ones(n_steps) + (v_final - v_init) * (1.0 - cos(
             linspace(0.0, pi, n_steps))) / 2.0
 
+        samples = size(v_data)
+
         print(v_data)
         print(v_data.size)
         if channel == 'x':
@@ -162,19 +141,54 @@ class Newport_FSM(System):
         else:
             v_data = np.vstack((np.zeros(v_data.size), v_data))
 
+        # TODO: Figure out relevant parameters for this function!
+        # Probably will have to rewrite the function.
+        self.task.configure_timing_sample_clock(source='OnboardClock', rate=ao_smooth_rate, sample_mode='finite')
 
+        self.task.write(v_data, auto_start=False, timeout=10.0, group_by='channel')
 
-        self.task.write(v_data, auto_start=False, timeout=10.0,
-                        group_by='channel')
+        try:
+            self.task.start()
+            print('Started FSM Scan')
+            sleep(samples*1.0/ao_smooth_rate)
+            print('Expected scan time:{} sec'.format(samples*1.0/ao_smooth_rate))
+            self.task.stop()
+
+        except e:
+            print('Failed in counter start phase:{}'.format(e))
+
+        #self.task.stop()
+
+    def write_and_count(self, devchan, ctrchan, src, aochan, vdata, freq=10000.0, minv=-10.0,
+                        maxv=10.0, timeout=10.0):
+        """
+        :param devchan (string): device channel specifier
+        :param ctrchan:
+        :param src:
+        :param aochan:
+        :param vdata:
+        :param freq:
+        :param minv:
+        :param maxv:
+        :param timeout:
+        :return:
+        """
+
 
 if __name__ == '__main__':
     with Newport_FSM() as inst:
         print('testing!')
 
         inst.ao_smooth(-5.0, 5.0, 'x')
+        sleep(1)
         inst.ao_smooth(5.0, -25.0, 'x')
+        sleep(1)
         inst.ao_smooth(-25.0, 25.0, 'x')
-
+        sleep(1)
         inst.ao_smooth(-5.0, 5.0, 'y')
+        sleep(1)
         inst.ao_smooth(5.0, -25.0, 'y')
+        sleep(1)
         inst.ao_smooth(-25.0, 25.0, 'y')
+        sleep(1)
+
