@@ -94,6 +94,6 @@ class Agilis(MessageBasedDriver):
     def version(self):
         return self.query('VE')
 
-    @mode.setter
-    def mode(self, value):
-        raise NotImplementedError
+    # @mode.setter
+    # def mode(self, value):
+    #     raise NotImplementedError
