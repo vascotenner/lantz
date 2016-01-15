@@ -3,8 +3,6 @@ from lantz.messagebased import MessageBasedDriver
 
 from pyvisa import constants
 
-from numpy import abs
-
 from time import sleep
 
 
@@ -55,9 +53,8 @@ class SP2150i(MessageBasedDriver):
         Sets output to specified wavelength, traveling at the current scan
         rate.
         """
-        curr_wavelength = self.nm
-        delta_lambda = abs(curr_wavelength - wavelength)
-
+        self.clear_buffer()
+        return self.query('{} NM'.format(wavelength))
 
     @Feat(limits=(0, max_speed))
     def scan_speed(self):
