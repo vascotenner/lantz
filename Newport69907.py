@@ -1,6 +1,7 @@
 from lantz import Feat, Action
 from lantz.messagebased import MessageBasedDriver
 from time import sleep
+from pyvisa import constants
 
 
 class Newport69907(MessageBasedDriver):
@@ -9,7 +10,7 @@ class Newport69907(MessageBasedDriver):
     supply.
     """
     DEFAULTS = {'ASRL': {'write_termination': '\r',
-                         'read_termination': '',
+                         'read_termination': '\r',
                          'baud_rate': 9600,
                          'data_bits': 8,
                          'parity': constants.Parity.none,
@@ -17,7 +18,7 @@ class Newport69907(MessageBasedDriver):
                          'encoding': 'latin-1',
                          'timeout': 10000}}
 
-    max_lamp_amps = 3  # amps
+    max_lamp_amps = 12  # amps
     max_lamp_power = 100  # watts
 
     def parse_status_register(self, status_register):
@@ -35,34 +36,35 @@ class Newport69907(MessageBasedDriver):
         Bit 1 - Limit
         Bit 0 - Interlock
         """
-        status_code = int(('0x' + error_register.replace('STB', '')), 16)
-        print('Status code:{}'.format(status_code))
+        status_code = int(('0x' + status_register.replace('STB', '')), 16)
+        status = []
+        # print('Status code:{}'.format(status_code))
         if status_code > 128:
-            print('Status: Lamp on')
+            status.append('Lamp on')
             status_code -= 128
         if status_code > 64:
-            print('Status: Ext')
+            status.append('Ext')
             status_code -= 64
         if status_code > 32:
-            print('Status: Power Mode')
+            status.append('Power Mode')
             status_code -= 32
         else:
-            print('Status: Current Mode')
+            status.append('Current Mode')
         if status_code > 16:
-            print('Status: Cal Mode')
+            status.append('Cal Mode')
             status_code -= 16
         if status_code > 8:
-            print('Status: Fault')
+            status.append('Fault')
             status_code -= 8
         if status_code > 4:
-            print('Status: Comm')
+            status.append('Comm')
             status_code -= 4
         if status_code > 2:
-            print('Status: Limit')
+            status.append('Limit')
             status_code -= 2
-        if status_code > 1:
-            print('Status: Interlock')
-        return 0
+        if status_code == 1:
+            status.append('Interlock')
+        return status
 
     def parse_error_register(self, error_register):
         """
@@ -79,31 +81,32 @@ class Newport69907(MessageBasedDriver):
         """
         # convert hex string into integer
         err_code = int(('0x' + error_register.replace('ESR', '')), 16)
-        print('error code')
+        errors = []
+        # print('error code:{}'.format(err_code))
         if err_code > 128:
-            print('Error: Power on')
+            errors.append('Power on')
             err_code -= 128
         if err_code > 64:
-            print('Error: User request')
+            errors.append('User request')
             err_code -= 64
         if err_code > 32:
-            print('Error: Command error')
+            errors.append('Command error')
             err_code -= 32
         if err_code > 16:
-            print('Error: Execution error')
+            errors.append('Execution error')
             err_code -= 16
         if err_code > 8:
-            print('Error: Device dependent error.')
+            errors.append('Device dependent error.')
             err_code -= 8
         if err_code > 4:
-            print('Error: Query error.')
+            errors.append('Query error.')
             err_code -= 4
         if err_code > 2:
-            print('Error: Request control')
+            errors.append('Request control')
             err_code -= 2
-        if err_code > 1:
-            print('Error: Operation complete')
-        return 0
+        # if err_code == 1:
+            # no error
+        return errors
 
     @Feat()
     def idn(self):
@@ -118,7 +121,7 @@ class Newport69907(MessageBasedDriver):
         Returns status information of the instrument.
         """
         status = self.query('STB?')
-        self.parse_status_register(status)
+        return self.parse_status_register(status)
 
     @Feat()
     def error_status(self):
@@ -126,7 +129,7 @@ class Newport69907(MessageBasedDriver):
         Returns the instrument error status.
         """
         error_register = self.query('ESR?')
-        self.parse_error_register(error_register)
+        return self.parse_error_register(error_register)
 
     @Feat()
     def amps(self):
@@ -154,7 +157,7 @@ class Newport69907(MessageBasedDriver):
         """
         Returns the number of hours on the current lamp.
         """
-        return int(self.query('LAMP\sHRS'))
+        return self.query('LAMP HRS?')
 
     @Feat()
     def amp_preset(self):
@@ -176,14 +179,14 @@ class Newport69907(MessageBasedDriver):
         """
         Returns the lamp power preset value (in watts).
         """
-        return = int(self.query('P-PRESET?'))
+        return int(self.query('P-PRESET?'))
 
     @power_preset.setter
     def power_preset(self, power_preset):
         """
         Sets the lamp powr preset value (in watts).
         """
-        error_status = self.query('P-PRESET={}'.format(ceil(power_preset)))
+        error_status = self.query('P-PRESET={0:04d}'.format(int(power_preset)))
         return self.parse_error_register(error_status)
 
     @Feat(limits=(0, max_lamp_amps))
@@ -198,7 +201,8 @@ class Newport69907(MessageBasedDriver):
         """
         Sets current amperage limit to max_amps
         """
-        error_register = self.query('A-LIM={0:.1f}')
+        error_register = self.query('A-LIM={0:.1f}'.format(max_amps))
+        return self.parse_error_register(error_register)
 
     @Feat(limits=(0, max_lamp_power))
     def power_lim(self):
@@ -212,7 +216,8 @@ class Newport69907(MessageBasedDriver):
         """
         Sets the power limit of the lamp to max_power.
         """
-        error_register = self.query('P-LIM={}'.format(floor(max_power)))
+        error_register = self.query('P-LIM={0:04d}'.format(int(max_power)))
+        return self.parse_error_register(error_register)
 
     @Action()
     def start_lamp(self):
@@ -220,6 +225,7 @@ class Newport69907(MessageBasedDriver):
         Turns on the arc lamp.
         """
         error_register = self.query('START')
+        return self.parse_error_register(error_register)
 
     @Action()
     def stop_lamp(self):
@@ -227,6 +233,7 @@ class Newport69907(MessageBasedDriver):
         Turns off the arc lamp.
         """
         error_register = self.query('STOP')
+        return self.parse_error_register(error_register)
 
     @Action()
     def reset(self):
@@ -234,11 +241,75 @@ class Newport69907(MessageBasedDriver):
         Returns the arc lamp to factory default settings.
         """
         error_register = self.query('RST')
+        return self.parse_error_register(error_register)
 
 
 if __name__ == '__main__':
-    with Newport69907('ASRL10::INSTR') as inst:
+    with Newport69907('ASRL9::INSTR') as inst:
+        print('== Instrument Information ==')
         print('Serial number:{}'.format(inst.idn))
         print('Status:{}'.format(inst.status))
+        print('Errors:{}'.format(inst.error_status))
 
-        # TODO: add more commands here.
+        print('== Current lamp status ==')
+        print('Amps:{}A'.format(inst.amps))
+        print('Volts:{}V'.format(inst.volts))
+        print('Watts:{}W'.format(inst.watts))
+        print('Lamp hours:{}hrs'.format(inst.lamp_hrs))
+
+        print('== Lamp Settings ==')
+        print('Current preset:{}A'.format(inst.amp_preset))
+        print('Power preset:{}W'.format(inst.power_preset))
+        print('Current limit:{}A'.format(inst.amp_lim))
+        print('Power limit:{}W'.format(inst.power_lim))
+
+        print('== Lamp Control ==')
+        print('Starting lamp...')
+        inst.start_lamp()
+        sleep(5)
+        print('Amps:{}A'.format(inst.amps))
+        print('Volts:{}V'.format(inst.volts))
+        print('Watts:{}W'.format(inst.watts))
+        print('Stopping lamp...')
+        inst.stop_lamp()
+
+        print('== Changing Lamp Settings ==')
+        inst.amp_lim = 12.0
+        inst.amp_preset = 7.5
+        inst.power_lim = 98
+        inst.power_preset = 95
+
+        print('Current preset:{}A'.format(inst.amp_preset))
+        print('Power preset:{}W'.format(inst.power_preset))
+        print('Current limit:{}A'.format(inst.amp_lim))
+        print('Power limit:{}W'.format(inst.power_lim))
+
+        inst.amp_lim = 10.0
+        inst.amp_preset = 5.5
+        inst.power_lim = 80
+        inst.power_preset = 75
+
+        print('Current preset:{}A'.format(inst.amp_preset))
+        print('Power preset:{}W'.format(inst.power_preset))
+        print('Current limit:{}A'.format(inst.amp_lim))
+        print('Power limit:{}W'.format(inst.power_lim))
+
+        print('Starting lamp...')
+        inst.start_lamp()
+        sleep(5)
+        print('Amps:{}A'.format(inst.amps))
+        print('Volts:{}V'.format(inst.volts))
+        print('Watts:{}W'.format(inst.watts))
+        print('Stopping lamp...')
+        inst.stop_lamp()
+        sleep(1)
+
+        inst.amp_lim = 12.0
+        inst.amp_preset = 7.5
+        inst.power_lim = 98
+        inst.power_preset = 95
+
+        print('Current preset:{}A'.format(inst.amp_preset))
+        print('Power preset:{}W'.format(inst.power_preset))
+        print('Current limit:{}A'.format(inst.amp_lim))
+        print('Power limit:{}W'.format(inst.power_lim))
