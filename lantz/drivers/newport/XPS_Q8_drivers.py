@@ -23,10 +23,11 @@ class XPS:
 
 	# Send command and get return
 	def __sendAndReceive (self, socketId, command):
+		sentinel = str.encode(',EndOfAPI')
 		try:
 			XPS.__sockets[socketId].send(str.encode(command))
 			ret = XPS.__sockets[socketId].recv(1024)
-			while (ret.find(str.encode(',EndOfAPI')) == -1):
+			while (ret.find(sentinel) == -1):
 				ret += XPS.__sockets[socketId].recv(1024)
 		except socket.timeout:
 			return [-2, '']
@@ -34,11 +35,12 @@ class XPS:
 			print('Socket error : ' + errString)
 			return [-2, '']
 
-		ret_split = ret.split(b',')
+		ret_split = ret.decode('utf-8').split(',')
+
 		if len(ret_split) == 1:
 			raise ValueError('invalid return value')
 		else:
-			return [int(ret_split[0]), b','.join(ret_split[1:-1])]
+			return [int(ret_split[0]), ','.join(ret_split[1:-1])]
 		# Newport problems follows...:
 		#for i in range(len(ret)):
 		# 	if (ret[i] == b','):
