@@ -3,7 +3,7 @@ from lantz.messagebased import MessageBasedDriver
 
 from pyvisa import constants
 
-from numpy import abs
+from numpy import abs, ceil
 
 from time import sleep
 
@@ -13,17 +13,19 @@ class SP2150i(MessageBasedDriver):
 
     """
     DEFAULTS = {'ASRL': {'write_termination': '\r',
-                         'read_termination': '',
+                         'read_termination': 'ok\r\n',
                          'baud_rate': 9600,
                          'data_bits': 8,
                          'parity': constants.Parity.none,
                          'stop_bits': constants.StopBits.one,
                          'encoding': 'latin-1',
-                         'timeout': 10000}}
+                         'timeout': 2000}}
 
     max_speed = 100
     wavelength_min = 380
     wavelength_max = 520
+
+    num_gratings = 8
 
     def initialize(self):
         """
@@ -37,7 +39,7 @@ class SP2150i(MessageBasedDriver):
         buffer...This could probably be done more elegantly...but it works, for
         now at least.
         """
-        result = self.resource.query('')
+        return self.query('')
 
     @Feat(limits=(wavelength_min, wavelength_max))
     def nm(self):
@@ -46,7 +48,7 @@ class SP2150i(MessageBasedDriver):
         """
         self.clear_buffer()
         read = self.query('?NM')
-        wavelength = read.replace('nm  ok', '')
+        wavelength = read.replace('nm', '')
         return float(wavelength)
 
     @nm.setter
@@ -56,7 +58,17 @@ class SP2150i(MessageBasedDriver):
         rate.
         """
         curr_wavelength = self.nm
+        scan_rate = self.scan_speed
         delta_lambda = abs(curr_wavelength - wavelength)
+        if delta_lambda > 0.1:
+            scan_time = ceil(delta_lambda / scan_rate * 60) + 2 # convert to seconds
+            self.clear_buffer()
+            print('Scanning from {}nm to {}nm, will take {}sec'.format(
+                curr_wavelength, wavelength, scan_time))
+            return self.write_message_wait('{0:.1f} NM'.format(wavelength),
+                                           scan_time)
+        else:
+            return
 
 
     @Feat(limits=(0, max_speed))
@@ -66,7 +78,7 @@ class SP2150i(MessageBasedDriver):
         """
         self.clear_buffer()
         read = self.query('?NM/MIN')
-        speed = read.replace('nm/min  ok', '')
+        speed = read.replace('nm/min', '')
         return float(speed)
 
     @scan_speed.setter
@@ -74,60 +86,104 @@ class SP2150i(MessageBasedDriver):
         """
         Sets current scan speed in nm/min.
         """
-        self.clear_buffer()
-        read = self.query('{}NM/MIN'.format(speed))
-        speed = read.replace('nm/min  ok', '')
-        return float(speed)
+        return self.write_message_wait('{0:.1f} NM/MIN'.format(speed), 0.1)
 
     @Feat(limits=(1, 2, 1))
     def grating(self):
         """
         Returns the current grating position
         """
-        self.clear_buffer()
-        return int(self.query('?GRATING'))
+        response = self.query('?GRATING')
+        return int(response)
 
     @grating.setter
     def grating(self, grating_num):
         """
-        Sets the current grating to be grating_num
+        Changes the current grating to be the one in slot grating_num.
         """
-        print('Warning: will wait 20 seconds to change grating.')
-        self.query('{} GRATING'.format(grating_num))
-        sleep(20)
+        print('Warning: Untested code! No other gratings were installed.')
+        print('Changing grating, please wait 20 seconds...')
+        return self.write_message_wait('{} GRATING'.format(grating_num), 20)
 
     @Feat(limits=(1, 3, 1))
     def turret(self):
         """
         Returns the selected turret number.
         """
-        return int(self.query('?TURRET'))
+        response = self.query('?TURRET')
+        return int(response.replace('  ok', ''))
 
     @turret.setter
     def turret(self, turr_set):
         """
         Selects the parameters for the grating on turret turr_set
         """
-        return self.query('{}TURRET'.format(turr_set))
+        print('Warning: untested. No other turrets were installed.')
+        return self.write_message_wait('{} TURRET'.format(turr_set), 1)
 
     @Feat()
     def turret_spacing(self):
         """
         Returns the groove spacing of the grating for each turret.
         """
-        return self.query('?TURRETS')
+        print('Warning: This command does\'t do anything?')
+        return self.write_message_wait('?TURRETS', 0.5)
 
     @Feat()
     def grating_settings(self):
         """
         Returns the groove spacing and blaze wavelength of grating positions
-        1-6. This corresponds to 2 grating positions for each of the 3 turrets
+        for all possible gratings.
         """
-        return self.query('?GRATINGS')
+        gratings = []
+        num_gratings = 8
+        self.write('?GRATINGS')
+        self.read()
+        for i in range(0, num_gratings):
+            gratings.append(self.read())
+        self.read()
+        return gratings
 
+    def write_message_wait(self, message, wait_time):
+        self.write(message)
+        sleep(wait_time)
+        return self.read()
 
 if __name__ == '__main__':
     with SP2150i('ASRL4::INSTR') as inst:
-        print('Wavelength: {}nm'.format(inst.nm))
-        print('Scan rate: {}nm/min'.format(inst.scan_speed))
-            #inst.nm = 400.0
+        print('== Monochromater Wavelength ==')
+        print('Wavelength:{}nm'.format(inst.nm))
+        print('Scan rate:{}nm/min'.format(inst.scan_speed))
+
+        print('== Monochromater Information ==')
+        print('Selected turret:{}'.format(inst.turret))
+        print('Selected grating:{}'.format(inst.grating))
+        #inst.turret = 3
+        #inst.grating = 2
+        print('Selected turret:{}'.format(inst.turret))
+        print('Selected grating:{}'.format(inst.grating))
+        print('Turret Spacing:{}'.format(inst.turret_spacing))
+        print('Gratings:{}'.format(inst.grating_settings))
+        #print('Grating information:{}'.format(inst.grating_settings))
+
+        for i in range(1, 20):
+            inst.scan_speed = 100.0
+            print('Scan rate:{}nm/min'.format(inst.scan_speed))
+            print('Wavelength:{}nm'.format(inst.nm))
+            inst.nm = 400.0
+            print('Wavelength:{}nm'.format(inst.nm))
+            inst.scan_speed = 50.0
+            print('Scan rate:{}nm/min'.format(inst.scan_speed))
+            inst.nm = 500.0
+            print('Wavelength:{}nm'.format(inst.nm))
+            print('Cycle {} complete.'.format(i))
+
+
+
+        #turret = 2
+        #grating = 2
+        #print('Selected turret:{}'.format(inst.turret))
+        #print('Selected grating:{}'.format(inst.grating))
+
+
+        #inst.nm = 500.0
