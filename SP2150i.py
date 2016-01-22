@@ -10,7 +10,15 @@ from time import sleep
 
 class SP2150i(MessageBasedDriver):
     """
+    Implements controls for the Princeton Instruments Acton Series SP2150i
+    Monochromater over the internal USB virtual serial port.
 
+    Communication with the device is a little finnicky, so if you run into
+    problems, I would suggest adding more buffer clears to avoid garbage
+    accumulating in the buffer and messing up your commands.
+
+    Author: Peter Mintun (pmintun@uchicago.edu)
+    Date: 1/21/2016
     """
     DEFAULTS = {'ASRL': {'write_termination': '\r',
                          'read_termination': 'ok\r\n',
@@ -61,7 +69,7 @@ class SP2150i(MessageBasedDriver):
         scan_rate = self.scan_speed
         delta_lambda = abs(curr_wavelength - wavelength)
         if delta_lambda > 0.1:
-            scan_time = ceil(delta_lambda / scan_rate * 60) + 2 # convert to seconds
+            scan_time = ceil(delta_lambda / scan_rate * 60) + 2  # need seconds
             self.clear_buffer()
             print('Scanning from {}nm to {}nm, will take {}sec'.format(
                 curr_wavelength, wavelength, scan_time))
@@ -136,10 +144,9 @@ class SP2150i(MessageBasedDriver):
         for all possible gratings.
         """
         gratings = []
-        num_gratings = 8
         self.write('?GRATINGS')
         self.read()
-        for i in range(0, num_gratings):
+        for i in range(0, self.num_gratings):
             gratings.append(self.read())
         self.read()
         return gratings
@@ -158,13 +165,12 @@ if __name__ == '__main__':
         print('== Monochromater Information ==')
         print('Selected turret:{}'.format(inst.turret))
         print('Selected grating:{}'.format(inst.grating))
-        #inst.turret = 3
-        #inst.grating = 2
+        # inst.turret = 3
+        # inst.grating = 2
         print('Selected turret:{}'.format(inst.turret))
         print('Selected grating:{}'.format(inst.grating))
         print('Turret Spacing:{}'.format(inst.turret_spacing))
         print('Gratings:{}'.format(inst.grating_settings))
-        #print('Grating information:{}'.format(inst.grating_settings))
 
         for i in range(1, 20):
             inst.scan_speed = 100.0
@@ -177,13 +183,3 @@ if __name__ == '__main__':
             inst.nm = 500.0
             print('Wavelength:{}nm'.format(inst.nm))
             print('Cycle {} complete.'.format(i))
-
-
-
-        #turret = 2
-        #grating = 2
-        #print('Selected turret:{}'.format(inst.turret))
-        #print('Selected grating:{}'.format(inst.grating))
-
-
-        #inst.nm = 500.0
