@@ -46,7 +46,7 @@ This command installs the colorama (used for producing colorful terminal output)
 
 For those interested in using custom drivers in the group's modified release, this step will allow pip to install a version of Lantz that is synced with the group Github.
 
-Git is a prequisite for this step. Obtain it here: https://git-scm.com/download/win
+Git is a prerequisite for this step. Obtain it here: https://git-scm.com/download/win
 
 Once installed, navigate to the location where you would like to have the group's modified Lantz release reside. Then, run:
 
