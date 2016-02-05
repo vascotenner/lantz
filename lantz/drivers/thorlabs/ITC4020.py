@@ -107,7 +107,6 @@ class ITC4020(MessageBasedDriver):
 
 
 
-
 if __name__ == '__main__':
     inst = ITC4020('USB0::0x1313::0x804A::M00336070::INSTR')
     inst.initialize()
