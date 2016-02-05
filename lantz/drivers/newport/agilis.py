@@ -96,9 +96,12 @@ class Agilis(MessageBasedDriver):
         self.write('{}PR{}'.format(axis, steps))
 
     @DictFeat()
-    def step_amplitude(self, axis, positive=True):
-        sign = '+' if positive else '-'
-        retval = self.query('{}SU{}?'.format(axis, sign))
+    def step_amplitude(self, axis):
+        val1 = self.query('{}SU-?'.format(axis))
+        val2 = self.query('{}SU+?'.format(axis))
+        stripped = '{}SU'.format(axis)
+        return (val1.lstrip(stripped), val2.lstrip(stripped))
+
 
     @step_amplitude.setter
     def step_amplitude(self, axis, amplitude):
@@ -109,10 +112,6 @@ class Agilis(MessageBasedDriver):
         else:
             raise ValueError('amplitude cannot be 0')
         self.write('{}SU{}{:d}'.format(axis, sign, abs(amplitude)))
-
-
-
-
 
     @Action()
     def move(self, axis, value, mode):
@@ -177,9 +176,14 @@ def main():
     log_to_screen(logging.CRITICAL)
     res_name = sys.argv[1]
     fmt_str = "{:<20}|{:>20}"
+    axis = 1
     with Agilis(res_name) as inst:
+        inst.channel = 1
         print(fmt_str.format("Device version", inst.version))
         print(fmt_str.format("Current channel", inst.channel))
+        amplitudes = inst.step_amplitude[axis]
+        print(fmt_str.format("- Step amplitude", amplitudes[0]))
+        print(fmt_str.format("+ Step amplitude", amplitudes[1]))
         print(inst.calibrate(1))
         print(inst.calibrate(2))
         inst.channel = 2
