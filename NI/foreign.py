@@ -223,7 +223,7 @@ class LibraryDriver(Driver):
             # args to ctypes
             elif isinstance(arg, int):
                 if arg > 0xFFFFFFFF:
-                    new_args.append(cast(arg, POINTER(c_uint64)))
+                    new_args.append(cast(arg,POINTER(c_uint64)))
                 else:
                     new_args.append(arg)
             elif isinstance(arg, float):
@@ -235,6 +235,10 @@ class LibraryDriver(Driver):
 
     def _wrapper(self, name, func, *args):
         new_args, collect = self._preprocess_args(name, *args)
+        #print(name)
+        #print(func)
+        #print('Old args:{}'.format(*args))
+        #print('New args:{}'.format(new_args))
 
         try:
             ret = func(*new_args)

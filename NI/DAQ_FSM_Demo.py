@@ -4,14 +4,17 @@
 
 from lantz.drivers.ni.daqmx import System
 from lantz.drivers.ni.daqmx import AnalogOutputTask, VoltageOutputChannel
+from lantz.drivers.ni.daqmx import AnalogInputTask, VoltageInputChannel #CounterInputTask, CountEdgesChannel, DigitalOutputChannel, DigitalOutputTask
 
 from lantz import Feat, DictFeat, Action
 
 import numpy as np
 
-from numpy import abs, ceil, pi, linspace, cos, ones, size
+from numpy import abs, ceil, pi, linspace, cos, ones
 
 from time import sleep
+
+from ctypes import c_uint32
 
 
 class Newport_FSM(System):
@@ -42,6 +45,10 @@ class Newport_FSM(System):
                   'ao_channel': 'ao1'}
         }
 
+        self.ao_smooth_rate = 50000.0  # Hz
+        self.ao_smooth_steps_per_volt = 1000.0  # steps/V
+
+
         for dim in self.fsm_dimensions:
             chan_name = dim
             phys_chan = self.dev_name + self.fsm_dimensions[dim]['ao_channel']
@@ -58,7 +65,7 @@ class Newport_FSM(System):
         """
         Stops AO tasks for controlling FSM.
         """
-        self.task.stop()
+        #self.task.stop()
 
     @Feat()
     def abs_position_pair(self):
@@ -91,7 +98,7 @@ class Newport_FSM(System):
         """
         return 0
 
-    def convert_V_to_um(self, dime, V):
+    def convert_V_to_um(self, dim, V):
         """
         Returns micron position corresponding to channel voltage.
         """
@@ -121,74 +128,211 @@ class Newport_FSM(System):
         Copy of dchristle's algorithm. (I know what you're trying to do, and
         just stop.)
         """
-        ao_smooth_rate = 5000.0  # Hz
-        ao_smooth_steps_per_volt = 1000.0  # steps/V
 
-        v_init = self.convert_um_to_V(x_init, channel)
-        v_final = self.convert_um_to_V(x_final, channel)
+        v_data = self.AO_smooth_func(x_init, x_final, channel)
+        n_steps = v_data.size
 
-        n_steps = ceil(abs(v_final - v_init) * ao_smooth_steps_per_volt)
+        samp_arr = np.empty(n_steps * 2, dtype=float)
 
-        v_data = v_init * ones(n_steps) + (v_final - v_init) * (1.0 - cos(
-            linspace(0.0, pi, n_steps))) / 2.0
-
-        samples = size(v_data)
-
-        print(v_data)
-        print(v_data.size)
         if channel == 'x':
-            v_data = np.vstack((v_data, np.zeros(v_data.size)))
+            samp_arr[0::2] = v_data
+            samp_arr[1::2] = np.zeros(n_steps)
         else:
-            v_data = np.vstack((np.zeros(v_data.size), v_data))
+            samp_arr[0::2] = np.zeros(n_steps)
+            samp_arr[1::2] = v_data
 
-        # TODO: Figure out relevant parameters for this function!
-        # Probably will have to rewrite the function.
-        self.task.configure_timing_sample_clock(source='OnboardClock', rate=ao_smooth_rate, sample_mode='finite')
 
-        self.task.write(v_data, auto_start=False, timeout=10.0, group_by='channel')
+
+        print(samp_arr)
+        print(n_steps)
+
+        #samp_arr = 1.5
+
+
+        self.task.configure_timing_sample_clock(source='OnboardClock', rate=self.ao_smooth_rate,
+                                                sample_mode='finite',
+                                                samples_per_channel=int(n_steps))
+
+        self.task.write(data=samp_arr, auto_start=False, timeout=0, group_by='scan')
+
 
         try:
             self.task.start()
             print('Started FSM Scan')
-            sleep(samples*1.0/ao_smooth_rate)
-            print('Expected scan time:{} sec'.format(samples*1.0/ao_smooth_rate))
+            print('Expected scan time:{} sec'.format(n_steps*1.0/self.ao_smooth_rate))
+            print('Number of scan points:{}'.format(n_steps))
+            sleep(n_steps*1.0/self.ao_smooth_rate)
             self.task.stop()
 
-        except e:
-            print('Failed in counter start phase:{}'.format(e))
+        except:
+            print('Failed in counter start phase...')
 
-        #self.task.stop()
 
-    def write_and_count(self, devchan, ctrchan, src, aochan, vdata, freq=10000.0, minv=-10.0,
-                        maxv=10.0, timeout=10.0):
+    def AO_smooth_func(self, x_init, x_final, channel):
         """
-        :param devchan (string): device channel specifier
-        :param ctrchan:
-        :param src:
-        :param aochan:
-        :param vdata:
-        :param freq:
-        :param minv:
-        :param maxv:
-        :param timeout:
-        :return:
+        :param x_min: minimum x coordinate (in microns) for scan
+        :param x_max: maximum x coordinate (in microns) for scan
+        :param channel: channel to scan over (i.e. x or y)
+
+        :return: array of voltages to write
         """
+
+        v_init = self.convert_um_to_V(x_init, channel)
+        v_final = self.convert_um_to_V(x_final, channel)
+
+        n_steps = int(ceil(abs(v_final - v_init) * self.ao_smooth_steps_per_volt))
+
+        v_data = v_init * ones(n_steps) + (v_final - v_init) * (1.0 - cos(
+            linspace(0.0, pi, n_steps))) / 2.0
+
+        return v_data
+
+
+    def FSM_2D_counts(self, x_min, x_max, y_min, y_max, freq, input_voltage_chan):
+        """
+        Scan FSM by writing an array of points over analog out
+
+        Args:
+        :param ctrchan: (string) device channel for counter
+        :param x_min: (float) minimum x position (in microns) for scan
+        :param x_max: (float) maximum x position (in microns) for scan
+        :param y_min: (float) minimum y position (in microns) for scan
+        :param y_max: (float) maximum y position (in microns) for scan
+        :param freq: (float) frequency for FSM scan
+
+        :param input_voltage_chan: (str) device channel for analog input voltage to read (i.e. 'dev1/ai0')
+
+        :return: returns a tuple containing two float arrays.
+            The first array contains the x-y positions used for the scan.
+            The second array contains the counts corresponding to each position.
+        """
+
+
+        x_voltages = self.AO_smooth_func(x_min, x_max, 'x')
+        nx_steps = x_voltages.size
+        y_voltages = self.AO_smooth_func(y_min, y_max, 'y')
+        ny_steps = y_voltages.size
+
+        x_pts = self.convert_V_to_um('x', x_voltages)
+        y_pts = self.convert_V_to_um('y', y_voltages)
+
+
+        # Create a 2D array of tuples for the xy points in the scan.
+        # Note that the AO smooth procedure means these points do not fall on a perfect grid
+        # That's why I've calculated them here and returned them to be available to the user.
+
+        # Note: change counts data type to be int, if using edge count APD
+        count_tuple = np.dtype([('x', 'float'), ('y', 'float'), ('counts', 'float')])
+        xy_pts = np.zeros([nx_steps, ny_steps], dtype=count_tuple)
+
+        # This avoids a nested for loop (if you have large array of points, O(N^2))
+        # I assumed that numpy does both of these operations relatively fast...
+        xy_pts['x'] = np.tile(x_pts, ny_steps).reshape(nx_steps, ny_steps)
+        xy_pts['y'] = np.repeat(y_pts, nx_steps).reshape(nx_steps, ny_steps)
+
+        n_steps = (nx_steps + 1) * ny_steps
+        v_data = np.zeros(2*n_steps)
+
+        # Avoids piezo hysteresis by ensuring they always take data scanning in the same direction
+        hyst_offset = 0.002 #volts
+        x_voltages = np.hstack([x_voltages[0] - hyst_offset, x_voltages])
+
+        v_data[0::2] = np.tile(x_voltages, ny_steps) #scan in x repeatedly (x_min to x_max, x_min to x_max, ...)
+        v_data[1::2] = np.repeat(y_voltages, nx_steps + 1) #scan in y slowly (y_min, y_min, ..., y_min+1, y_min+1, ..., y_max)
+
+
+        #import matplotlib.pyplot as plt
+
+        #plt.plot(v_data[0::2])
+        #plt.plot(v_data[1::2])
+        #plt.plot(v_data[3::2])
+        #plt.show()
+
+        print(v_data.shape)
+        counts = np.zeros(n_steps)
+
+        count_task = AnalogInputTask('counter')
+        counter_channel = VoltageInputChannel(input_voltage_chan)
+        count_task.add_channel(counter_channel)
+
+
+        # Synchronize tasks to both read at a rate, which is controlled by the internal DAQ clock.
+        sample_clock = 'OnboardClock'
+        self.task.configure_timing_sample_clock(source=sample_clock, rate=freq,
+                                                sample_mode='finite',
+                                                samples_per_channel=n_steps)
+
+        count_task.configure_timing_sample_clock(source=sample_clock, rate=freq,
+                                                sample_mode='finite',
+                                                samples_per_channel=n_steps)
+
+        # Write the array of voltages that will be used to control the DAQ here.
+        self.task.write(v_data, auto_start=False, timeout=0, group_by='channel')
+
+        # Synchronize tasks to both start on the AnalogInput start trigger
+        trigger_src = 'ai/StartTrigger'
+        self.task.configure_trigger_digital_edge_start(trigger_src)
+
+        # This arms the trigger, thereby starting the AnalogOutputTask (FSM) simultaneously
+        # with the AnalogInputTask
+        self.task.start()
+
+        print('Tasks configured.')
+
+
+        try:
+            print('Starting FSM Scan...')
+            sleep(10)
+            scan_time = n_steps*1.0/freq
+            print('Expected scan time:{} sec'.format(scan_time))
+            print('Number of scan points:{}'.format(n_steps))
+            # Executing the read task executes the two tasks synchronously
+            t_extra = 1.0 # adds 1 second grace period, probably unnecessary
+            counts = count_task.read(samples_per_channel=n_steps, timeout=scan_time + t_extra)
+
+            # Stop both tasks
+            self.task.stop()
+            count_task.stop()
+
+        except:
+            print('FSM: 2D Scan Failed in counter start phase.')
+
+        counts = counts.reshape([nx_steps + 1, ny_steps])
+
+        xy_pts['counts'] = counts[1:,:] #drop first column
+
+        # This then returns a FSM 2D scan image as a tuple (x_coord, y_coord, counts)
+        return xy_pts
+
+
+
+
+
 
 
 if __name__ == '__main__':
     with Newport_FSM() as inst:
         print('testing!')
+        print('Sweep from -5.0 to 5.0')
+        #inst.ao_smooth(-5.0, 5.0, 'x')
+            # print('Sweep from 5.0 to -25.0')
+            # inst.ao_smooth(5.0, -25.0, 'x')
+            # sleep(1)
+            # print('Sweep from -25.0 to 25.0')
+            # inst.ao_smooth(-25.0, 25.0, 'x')
+            # sleep(1)
+            # inst.ao_smooth(-5.0, 5.0, 'y')
+            # sleep(1)
+            # inst.ao_smooth(5.0, -25.0, 'y')
+            # sleep(1)
+            # inst.ao_smooth(-25.0, 25.0, 'y')
+            # sleep(1)
 
-        inst.ao_smooth(-5.0, 5.0, 'x')
-        sleep(1)
-        inst.ao_smooth(5.0, -25.0, 'x')
-        sleep(1)
-        inst.ao_smooth(-25.0, 25.0, 'x')
-        sleep(1)
-        inst.ao_smooth(-5.0, 5.0, 'y')
-        sleep(1)
-        inst.ao_smooth(5.0, -25.0, 'y')
-        sleep(1)
-        inst.ao_smooth(-25.0, 25.0, 'y')
-        sleep(1)
+        print('testing 2D count and scan...')
+        inst.FSM_2D_counts(-1.0, 1.0, -1.0, 1.0, 500.0, 'dev1/ai0')
+
+        print('derp derp derp derp!')
+
+
+
 

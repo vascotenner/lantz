@@ -1,5 +1,4 @@
-﻿# -*- coding: utf-8 -*-
-"""
+﻿"""
     lantz.drivers.ni.daqmx.base
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -855,8 +854,9 @@ class Task(_Base):
         """
         if source == 'on_board_clock':
             source = None
-        self.samples_per_channel = samples_per_channel
         self.sample_mode = sample_mode
+
+
         self.lib.CfgSampClkTiming(source, rate, active_edge, sample_mode, samples_per_channel)
 
     def configure_timing_burst_handshaking_export_clock(self, *args, **kws):
@@ -956,8 +956,15 @@ class Task(_Base):
           Specifies on which edge of a digital signal to start
           acquiring or generating samples: rising or falling edge(s).
         """
+        from ctypes import c_wchar_p
 
-        self.lib.CfgDigEdgeStartTrig(self, source, edge)
+        if edge == 'falling':
+            edge_val = int(Constants.Val_Falling)
+        else:
+            edge_val = int(Constants.Val_Rising)
+
+
+        self.lib.CfgDigEdgeStartTrig(source, edge_val)
 
     @Action(values=(str, str, _WHEN_MATCH))
     def configure_trigger_digital_pattern_start(self, source, pattern, match=True):
@@ -981,7 +988,7 @@ class Task(_Base):
           Specifies the conditions under which the trigger
           occurs: pattern matches or not.
         """
-        self.lib.CfgDigPatternStartTrig(self, source, pattern, match)
+        self.lib.CfgDigPatternStartTrig(source, pattern, match)
 
     def configure_trigger_disable_start(self):
         """
@@ -1033,6 +1040,18 @@ class Task(_Base):
         """
 
         self.lib.CfgAnlgEdgeRefTrig(source, slope, level, pre_trigger_samps)
+
+    @Action()
+    def send_software_trigger(self, triggerID=Constants.Val_AdvanceTrigger):
+        """
+
+        :param triggerID: (int32)  	Specifies which software trigger to generate.
+
+               DAQmx_Val_AdvanceTrigger		Generate the advance trigger
+
+        """
+
+        self.lib.SendSoftwareTrigger(triggerID)
 
 
     @Feat(values=(str, _WHEN_WINDOW, None, None, None))
@@ -1152,6 +1171,20 @@ class Task(_Base):
             source = '/' + source
 
         self.lib.CfgDigPatternRefTrig(self, source, pattern, match, pre_trigger_samps)
+
+    @Action()
+    def configure_output_buffer(self, samples_per_channel=1000):
+        """
+
+        :params: taskHandle (TaskHandle): task to configure
+        :params: num_samps_per_chan (uInt32): number of samples to output per channel.
+        Zero indicates no buffer should be allocated. Use a buffer size of 0 to perform
+         a hardware-timed operation without using a buffer.
+
+        :return: status (int32) - error code returned by the function in the event of an
+        error or warning
+        """
+        return self.lib.CfgOutputBuffer(self, samples_per_channel)
 
     @Action()
     def disable_reference_trigger(self):
