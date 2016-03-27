@@ -905,7 +905,7 @@ class QComboBoxMixin(WidgetMixin):
         if isinstance(self._feat.values, dict):
             self.__values = list(self._feat.values.keys())
         else:
-            self.__values = list(self.__values)
+            self.__values = list(self._feat.values)
         self.clear()
         self.addItems([str(value) for value in self.__values])
 
