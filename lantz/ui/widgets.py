@@ -189,6 +189,8 @@ class WidgetMixin(object):
     def on_feat_value_changed(self, value, old_value=MISSING, other=MISSING):
         """When the driver value is changed, update the widget if necessary.
         """
+        # If we have a dict widget and the changes concerns another key => don't change the widget value
+        if (not other is MISSING) and ('key' in other) and (other['key'] != self._feat_key): return
         if self.value() != value:
             self.setValue(value)
 

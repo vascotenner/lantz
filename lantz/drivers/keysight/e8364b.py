@@ -61,7 +61,7 @@ class E8364B(MessageBasedDriver):
     def if_bandwidth(self, value):
         self.write('SENS:BAND {}'.format(int(value)))
 
-    @Feat(limits=(1, 20001, 1))
+    @Feat(limits=(1, 16001, 1))
     def nb_points(self):
         """The number of data points for the measurement
         """
@@ -73,8 +73,12 @@ class E8364B(MessageBasedDriver):
 
     ALLOWED_MEAS_TYPE = {"S11", "S12", "S21", "S22"}
     @Feat(values=ALLOWED_MEAS_TYPE)
-    def mode(self):
+    def meas_type(self):
         return self.get_measurement_catalog()['CH1_S11_1']
+
+    @meas_type.setter
+    def meas_type(self, meas_type):
+        self.write("CALC:PAR:MOD {}".format(meas_type))
 
 
 # ----------------------------------------------------
@@ -90,6 +94,16 @@ class E8364B(MessageBasedDriver):
     @power_on.setter
     def power_on(self, state=True):
         self.write('OUTP {}'.format(state))
+
+    @Feat()
+    def power_level(self):
+        """RF Power level in dBm
+        """
+        return float(self.query("SOUR:POW?"))
+
+    @power_level.setter
+    def power_level(self, level):
+        self.write("SOUR:POW {}".format(level))
 
     ## Possibly not available on this model...
     # @Feat(values={True: 1, False: 0})
@@ -160,9 +174,15 @@ class E8364B(MessageBasedDriver):
         else:
             raise Exception(str(form) + "Invalid data format")
 
+    @Action()
     def x_data(self):
         return self.query_data('SENS:X?')
 
+    @Action()
+    def y_data(self):
+        data = self.query_data("CALC:DATA? SDATA")
+        data = data[::2]+data[1::2]*1j
+        return data
 
 
 # ----------------------------------------------------
