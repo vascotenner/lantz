@@ -20,7 +20,8 @@ class E8364B(MessageBasedDriver):
 
 
     DEFAULTS = {'COMMON': {'write_termination': '\n',
-                           'read_termination': '\n'}}
+                           'read_termination': '\n',
+                           'timeout':10000,}}
 
     @Feat(read_once=True)
     def idn(self):
@@ -223,6 +224,7 @@ class E8364B(MessageBasedDriver):
             self.create_new_measurement(name='CH1_S11_1', meas_type="S11")
 
         self.select_measurement('CH1_S11_1')
+        self.data_format = 'REAL64'
 
 
 
