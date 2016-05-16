@@ -13,6 +13,7 @@ import os
 import ctypes
 import inspect
 from ctypes.util import find_library
+from ctypes import cast, POINTER, c_uint64, c_double
 from itertools import chain
 
 from lantz import Driver
@@ -77,8 +78,10 @@ class Library(object):
             return getattr(self.internal, name)
         except Exception:
             if self.prefix:
-                raise AttributeError('Could not find ({}){} in {}'.format(self.prefix, name, self.internal))
-            raise AttributeError('Could not find {} in {}'.format(name, self.internal))
+                raise AttributeError('Could not find ({}){} in {}'.format(
+                    self.prefix, name, self.internal))
+            raise AttributeError(
+                'Could not find {} in {}'.format(name, self.internal))
 
     def __getattr__(self, name):
         if name.startswith('__') and name.endswith('__'):
@@ -108,6 +111,7 @@ TYPES = {'c': ctypes.c_char,
          'f': ctypes.c_float,
          'd': ctypes.c_double,
          'u32': ctypes.c_uint32,
+         'u64': ctypes.c_uint64,
          'i32': ctypes.c_int32,
          'f32': ctypes.c_float,
          'f64': ctypes.c_double}
@@ -138,7 +142,8 @@ class RetValue(object):
         try:
             self.buffer = (TYPES[type] * 1)()
         except KeyError:
-            raise KeyError('The type {} is not defined ()'.format(type, TYPES.keys()))
+            raise KeyError(
+                'The type {} is not defined ()'.format(type, TYPES.keys()))
 
     def __iter__(self):
         yield self
@@ -154,7 +159,8 @@ class RetTuple(object):
         try:
             self.buffer = (TYPES[type] * length)()
         except KeyError:
-            raise KeyError('The type {} is not defined ()'.format(type, TYPES.keys()))
+            raise KeyError(
+                'The type {} is not defined ()'.format(type, TYPES.keys()))
         self.length = length
 
     def __iter__(self):
@@ -192,11 +198,11 @@ class LibraryDriver(Driver):
             except OSError:
                 pass
         else:
-            raise OSError('While instantiating {}: library not found'.format(self.__class__.__name__))
+            raise OSError('While instantiating {}: library not found'.format(
+                self.__class__.__name__))
 
-        self.log_info('LibraryDriver created with {}', name)
+        self.log_info('LibraryDriver created with {} from {}', name, folder)
         self._add_types()
-
 
     def _add_types(self):
         pass
@@ -213,6 +219,15 @@ class LibraryDriver(Driver):
                 new_args.append(arg.buffer)
             elif isinstance(arg, str):
                 new_args.append(bytes(arg, 'ascii'))
+            # hack to avoid issue w/ overflowing 64-bit integer when passing
+            # args to ctypes
+            elif isinstance(arg, int):
+                if arg > 0xFFFFFFFF:
+                    new_args.append(cast(arg,POINTER(c_uint64)))
+                else:
+                    new_args.append(arg)
+            elif isinstance(arg, float):
+                new_args.append(c_double(arg))
             else:
                 new_args.append(arg)
 
@@ -220,11 +235,17 @@ class LibraryDriver(Driver):
 
     def _wrapper(self, name, func, *args):
         new_args, collect = self._preprocess_args(name, *args)
+        #print(name)
+        #print(func)
+        #print('Old args:{}'.format(*args))
+        #print('New args:{}'.format(new_args))
 
         try:
             ret = func(*new_args)
+
         except Exception as e:
-            raise Exception('While calling {} with {} (was {}): {}'.format(name, new_args, args, e))
+            raise Exception('While calling {} with {} (was {}): {}'.format(
+                name, new_args, args, e))
 
         ret = self._return_handler(name, ret)
 
@@ -234,7 +255,8 @@ class LibraryDriver(Driver):
         if collect:
             values = [item.value for item in collect]
             values.insert(0, ret)
-            self.log_debug('Function call {} returned {}. Collected: {}', name, ret, collect)
+            self.log_debug(
+                'Function call {} returned {}. Collected: {}', name, ret, collect)
             return tuple(values)
 
         self.log_debug('Function call {} returned {}.', name, ret)
