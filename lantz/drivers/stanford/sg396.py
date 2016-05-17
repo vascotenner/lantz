@@ -29,7 +29,7 @@ class SG396(MessageBasedDriver):
             """
             low frequency amplitude (BNC output)
             """
-            return self.query('AMPL?')
+            return float(self.query('AMPL?'))
 
         @lf_amplitude.setter
         def lf_amplitude(self, value):
@@ -40,7 +40,7 @@ class SG396(MessageBasedDriver):
             """
             RF amplitude (Type N output)
             """
-            return self.query('AMPR?')
+            return float(self.query('AMPR?'))
 
         @rf_amplitude.setter
         def rf_amplitude(self, value):
