@@ -15,5 +15,6 @@
 
 from .sr830 import SR830
 from .sg396 import SG396
+from .dg645 import DG645
 
-__all__ = ['SR830', 'SG396']
+__all__ = ['SR830', 'SG396', 'DG645']

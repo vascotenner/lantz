@@ -6,7 +6,7 @@ from collections import OrderedDict
 from time import sleep
 
 
-class SignalRecovery7265(MessageBasedDriver):
+class SR7265(MessageBasedDriver):
     """Signal Recovery 7265
     DSP Lock-in Amplifier
 
@@ -294,7 +294,7 @@ class SignalRecovery7265(MessageBasedDriver):
         return self.write('IE {}'.format(value))
 
 if __name__ == '__main__':
-    with SignalRecovery7265.via_gpib(7) as inst:
+    with SR7265.via_gpib(7) as inst:
         print('The instrument identification is ' + inst.idn)
 
         print('Testing signal readings')

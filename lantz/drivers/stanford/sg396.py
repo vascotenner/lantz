@@ -24,23 +24,23 @@ class SG396(MessageBasedDriver):
 
         # Signal synthesis commands
 
-        @Feat(units='V')
+        @Feat
         def lf_amplitude(self):
             """
             low frequency amplitude (BNC output)
             """
-            return self.query('AMPL?')
+            return float(self.query('AMPL?'))
 
         @lf_amplitude.setter
         def lf_amplitude(self, value):
             self.write('AMPL{:.2f}'.format(value))
 
-        @Feat(units='V')
+        @Feat
         def rf_amplitude(self):
             """
             RF amplitude (Type N output)
             """
-            return self.query('AMPR?')
+            return float(self.query('AMPR?'))
 
         @rf_amplitude.setter
         def rf_amplitude(self, value):
