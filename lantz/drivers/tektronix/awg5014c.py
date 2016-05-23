@@ -19,10 +19,8 @@ import re as _re
 import os as _os
 import time as _t
 
-from spyre.Tools.wfm_writer import create_wfm, iee_block_to_array, array_to_iee_block, Sequence
 
-
-from lantz.drivers.tektronix.awg5014c_tools import AWG_File_Writer
+from lantz.drivers.tektronix.awg5014c_tools import AWG_File_Writer, create_wfm, iee_block_to_array, array_to_iee_block, Sequence
 import lantz.drivers.tektronix.awg5014c_constants as _cst
 
 class AWG5014C(MessageBasedDriver):
@@ -165,7 +163,7 @@ class AWG5014C(MessageBasedDriver):
 
     @Action()
     def load_awg_file(self, filename):
-        self.write('AWGC:SRES "{}"'.format(filename))
+        self.write('AWGCONTROL:SRESTORE "{}"'.format(filename))
 
 
 
