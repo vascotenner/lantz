@@ -152,6 +152,14 @@ class AWG5014C(MessageBasedDriver):
         else:
             self.ftp.storbinary('STOR ' + remote_filename, open(local_filename, 'rb'), blocksize=1024)
 
+    @Action()
+    def force_jump(self, line_number):
+        self.write("SEQUENCE:JUMP:IMMEDIATE {}".format(line_number))
+
+    @Action()
+    def trigger(self):
+        self.write("*TRG")
+
     # ----------------------------------------------------
     # Source
     # ----------------------------------------------------
