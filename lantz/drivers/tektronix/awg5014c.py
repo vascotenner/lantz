@@ -39,7 +39,7 @@ class AWG5014C(MessageBasedDriver):
     def finalize(self):
         print("Closing ftp connection")
         try: self.ftp.quit()
-        finally: super(AWG5014C, self.finalize())
+        finally: super(AWG5014C, self).finalize()
 
     @Feat(read_once=True)
     def idn(self):
