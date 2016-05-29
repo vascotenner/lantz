@@ -32,9 +32,9 @@ class AWG5014C(MessageBasedDriver):
 
     def __init__(self, resource_name, *args, **kwargs):
         super(AWG5014C, self).__init__(resource_name, *args, **kwargs)
-        ip = _re.findall("[0-9]+.[0-9]+.[0-9]+.[0-9]+", resource_name)[0]
-        self.ftp = _ftp.FTP(ip)
-        self.ftp.login()
+        self.ip = _re.findall("[0-9]+.[0-9]+.[0-9]+.[0-9]+", resource_name)[0]
+        # self.ftp = _ftp.FTP(ip)
+        # self.ftp.login()
 
     def finalize(self):
         print("Closing ftp connection")
@@ -147,10 +147,13 @@ class AWG5014C(MessageBasedDriver):
         self.write(':MMEM:COPY "{}","{}","{}","{}"'.format(source_file_path, source_drive, dest_file_path, dest_drive))
 
     def upload_file(self, local_filename, remote_filename, print_progress=True):
+        self.ftp = _ftp.FTP(self.ip)
+        self.ftp.login()
         if print_progress:
             FTP_Upload(self.ftp,local_filename, remote_filename)
         else:
             self.ftp.storbinary('STOR ' + remote_filename, open(local_filename, 'rb'), blocksize=1024)
+        self.ftp.quit()
 
     @Action()
     def force_jump(self, line_number):
