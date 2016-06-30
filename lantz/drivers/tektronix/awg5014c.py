@@ -19,10 +19,8 @@ import re as _re
 import os as _os
 import time as _t
 
-from spyre.Tools.wfm_writer import create_wfm, iee_block_to_array, array_to_iee_block, Sequence
 
-
-from lantz.drivers.tektronix.awg5014c_tools import AWG_File_Writer
+from lantz.drivers.tektronix.awg5014c_tools import AWG_File_Writer, create_wfm, iee_block_to_array, array_to_iee_block, Sequence
 import lantz.drivers.tektronix.awg5014c_constants as _cst
 
 class AWG5014C(MessageBasedDriver):
@@ -34,14 +32,14 @@ class AWG5014C(MessageBasedDriver):
 
     def __init__(self, resource_name, *args, **kwargs):
         super(AWG5014C, self).__init__(resource_name, *args, **kwargs)
-        ip = _re.findall("[0-9]+.[0-9]+.[0-9]+.[0-9]+", resource_name)[0]
-        self.ftp = _ftp.FTP(ip)
-        self.ftp.login()
+        self.ip = _re.findall("[0-9]+.[0-9]+.[0-9]+.[0-9]+", resource_name)[0]
+        # self.ftp = _ftp.FTP(ip)
+        # self.ftp.login()
 
     def finalize(self):
         print("Closing ftp connection")
         try: self.ftp.quit()
-        finally: super(AWG5014C, self.finalize())
+        finally: super(AWG5014C, self).finalize()
 
     @Feat(read_once=True)
     def idn(self):
@@ -149,10 +147,21 @@ class AWG5014C(MessageBasedDriver):
         self.write(':MMEM:COPY "{}","{}","{}","{}"'.format(source_file_path, source_drive, dest_file_path, dest_drive))
 
     def upload_file(self, local_filename, remote_filename, print_progress=True):
+        self.ftp = _ftp.FTP(self.ip)
+        self.ftp.login()
         if print_progress:
             FTP_Upload(self.ftp,local_filename, remote_filename)
         else:
             self.ftp.storbinary('STOR ' + remote_filename, open(local_filename, 'rb'), blocksize=1024)
+        self.ftp.quit()
+
+    @Action()
+    def force_jump(self, line_number):
+        self.write("SEQUENCE:JUMP:IMMEDIATE {}".format(line_number))
+
+    @Action()
+    def trigger(self):
+        self.write("*TRG")
 
     # ----------------------------------------------------
     # Source
@@ -165,7 +174,7 @@ class AWG5014C(MessageBasedDriver):
 
     @Action()
     def load_awg_file(self, filename):
-        self.write('AWGC:SRES "{}"'.format(filename))
+        self.write('AWGCONTROL:SRESTORE "{}"'.format(filename))
 
 
 

@@ -115,3 +115,25 @@ class SG396(MessageBasedDriver):
             sets carrier phase to 0 degrees
             """
             self.write('RPHS')
+
+        @Feat(values={True: 1, False: 0})
+        def mod_toggle(self):
+            """
+            Modulation State
+            """
+            return self.query('MODL?')
+
+        @mod_toggle.setter
+        def mod_toggle(self, value):
+            self.write('MODL {}'.format(value))
+
+        @Feat(values={'AM': 0, 'FM': 1, 'Phase':2, 'Sweep':3, 'Pulse':4, 'Blank':5, 'QAM':7,'CPM':8, 'VSB':9})
+        def mod_type(self):
+            """
+            Modulation State
+            """
+            return self.query('TYPE?')
+
+        @mod_type.setter
+        def mod_type(self, value):
+            self.write('TYPE {}'.format(value))
