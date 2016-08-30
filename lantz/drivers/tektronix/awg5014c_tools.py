@@ -11,8 +11,10 @@
 import struct
 import numpy as _np
 from datetime import datetime as _dt
+import time as _t
+import sys
 
-def array_to_iee_block(analog, marker1, marker2, prepend_length=True):
+def array_to_iee_block1(analog, marker1, marker2, prepend_length=True):
     """
         Produces a little-endian 4-byte floating point + 1-byte marker representation of analog
         :param analog: Array of float
@@ -20,16 +22,57 @@ def array_to_iee_block(analog, marker1, marker2, prepend_length=True):
         :param marker2: Array of bool (or 1/0)
         :return: Byte Stream in the WFM format
     """
+    last = _t.time()
     n = len(analog)
     num_bytes = 5 * n
     num_digit = len(str(num_bytes))
     analog_fmt_str = '<{:d}f'.format(n)
     marker_fmt_str = '<{:d}B'.format(n)
+    print(_t.time()-last )
+    last = _t.time()
     bin_analog = struct.pack(analog_fmt_str, *analog)
+    print(_t.time() - last)
+    last = _t.time()
     bin_marker = struct.pack(marker_fmt_str, *((b1 + (b2 << 1))<<6 for b1, b2 in zip(marker1, marker2)))
+    print(_t.time() - last)
+    last = _t.time()
     bin_analog_bytes = list(bin_analog[4 * i:4 * (i + 1)] for i in range(0, n))
+    print(_t.time() - last)
+    last = _t.time()
+    array = zip(bin_analog_bytes, bin_marker)
+    print(_t.time() - last)
+    last = _t.time()
     bin_all = b''.join(
-        b''.join((w, m.to_bytes(1, byteorder='little'))) for w, m in zip(bin_analog_bytes, bin_marker))
+        b''.join((w, m.to_bytes(1, byteorder='little'))) for w, m in array)
+    print(_t.time() - last)
+    last = _t.time()
+    print("-----------------")
+    if prepend_length:  return bytes('#{:d}{:d}'.format(num_digit, num_bytes), encoding='ascii') + bin_all
+    else             :  return bin_all
+
+
+def array_to_ieee_block(analog, marker1, marker2, prepend_length=True):
+    """
+        Produces a little-endian 4-byte floating point + 1-byte marker representation of analog
+        :param analog: Array of numpy float32
+        :param marker1: Array of numpy int8
+        :param marker2: Array of numpy int8
+        :return: Byte Stream in the WFM format
+    """
+    num_bytes = 5 * len(analog)
+    num_digit = len(str(num_bytes))
+    if not marker1.dtype==_np.int8: marker1 = _np.asarray(marker1, dtype=_np.int8)
+    if not marker2.dtype==_np.int8: marker2 = _np.asarray(marker2, dtype=_np.int8)
+    if not analog.dtype == _np.float32: analog = _np.asarray(analog, dtype=_np.float32)
+
+    points = _np.zeros(len(analog), dtype='<f4, i1')
+    points['f1'] = (marker1 + ((marker2)<<1))<<6
+    points['f0'] = analog
+
+    #Makes sure that the byteordering is 'little'
+    if not sys.byteorder == 'little': points = points.newbyteorder('<')
+    bin_all = points.tobytes()
+
     if prepend_length:  return bytes('#{:d}{:d}'.format(num_digit, num_bytes), encoding='ascii') + bin_all
     else             :  return bin_all
 
@@ -112,7 +155,7 @@ class AWG_File_Writer(object):
 
     def add_waveform(self, name, analog, marker1, marker2):
         if len(self.wfm)>=32000: raise Exception("Maximum 32000 waveform in .AWG file...")
-        data = array_to_iee_block(analog, marker1, marker2, prepend_length=False)
+        data = array_to_ieee_block(analog, marker1, marker2, prepend_length=False)
         t = _dt.now()
         tm = [t.year, t.month, t.weekday(), t.day, t.hour, t.minute, t.second, t.microsecond // 1000]
         self.wfm.append(name)
@@ -158,6 +201,23 @@ class AWG_File_Writer(object):
 
 
     def get_bytes(self):
+        ans = list()
+        for i in range(len(self.records)):
+            group_list = self.records[i]
+            if not i == 6:
+                ans.extend([entry.get_bytes() for entry in group_list])
+            else:
+                # Special treatement for subseq group
+                subseq_number, cummul_line = 1, 0
+                for ss in group_list:
+                    if len(ss.lines) != 0:
+                        ans2 += ss.get_bytes(subseq_number,cummul_line)
+                        subseq_number += 1
+                        cummul_line += len(ss.lines)
+
+        return b''.join(ans)
+
+    def get_bytes2(self):
         ans = b''
         for i in range(len(self.records)):
             group_list = self.records[i]
@@ -169,7 +229,7 @@ class AWG_File_Writer(object):
                 subseq_number, cummul_line = 1, 0
                 for ss in group_list:
                     if len(ss.lines) != 0:
-                        ans += ss.get_bytes(subseq_number,cummul_line)
+                        ans += ss.get_bytes(subseq_number, cummul_line)
                         subseq_number += 1
                         cummul_line += len(ss.lines)
         return ans
