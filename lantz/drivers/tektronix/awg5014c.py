@@ -20,7 +20,7 @@ import os as _os
 import time as _t
 
 
-from lantz.drivers.tektronix.awg5014c_tools import AWG_File_Writer, create_wfm, iee_block_to_array, array_to_iee_block, Sequence
+from lantz.drivers.tektronix.awg5014c_tools import AWG_File_Writer, create_wfm, iee_block_to_array, array_to_ieee_block, Sequence
 import lantz.drivers.tektronix.awg5014c_constants as _cst
 
 class AWG5014C(MessageBasedDriver):
@@ -37,9 +37,7 @@ class AWG5014C(MessageBasedDriver):
         # self.ftp.login()
 
     def finalize(self):
-        print("Closing ftp connection")
-        try: self.ftp.quit()
-        finally: super(AWG5014C, self).finalize()
+        pass
 
     @Feat(read_once=True)
     def idn(self):
@@ -57,7 +55,7 @@ class AWG5014C(MessageBasedDriver):
             analog should be an array of float and marker 1 and 2 an array of bool or 0/1
             analog, marker1 and marker2 should have the same dimensions
         """
-        data = array_to_iee_block(analog, marker1, marker2)
+        data = array_to_ieee_block(analog, marker1, marker2)
         cmd = bytes('WLIS:WAV:DATA "{}",'.format(name), encoding='ascii')
         if not start_index is None:
             cmd += bytes('{},'.format(start_index), encoding='ascii')
