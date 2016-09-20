@@ -55,3 +55,20 @@ class XPSQ8(Driver):
     @Action()
     def rel_position(self, channel, dposition):
         retval = self._xps.GroupMoveRelative(self._socket_id, channel, [dposition])
+
+def main():
+    import logging
+    import sys
+    from lantz.log import log_to_screen
+    import numpy as np
+    log_to_screen(logging.CRITICAL)
+    res_name = sys.argv[1]
+    with XPSQ8(res_name) as inst:
+        positions = np.linspace(-12.5, 12.5, 20)
+        for val in positions:
+            print(val)
+            inst.abs_position['Group1.Pos'] = val
+            print(inst.abs_position['Group1.Pos'])
+
+if __name__ == '__main__':
+    main()
