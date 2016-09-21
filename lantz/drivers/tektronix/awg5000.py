@@ -67,6 +67,22 @@ class AWG5000(MessageBasedDriver):
         for channel in range(1, 5):
             self.toggle_output[channel] = state
 
+    @DictFeat(limits=(1, 2 ** 16))
+    def seq_loop_count(self, line):
+        return int(self.query('SEQUENCE:ELEMENT{}:LOOP:COUNT?'.format(line))
+
+    @seq_loop_count.setter
+    def seq_loop_count(self, line, count):
+        self.write('SEQUENCE:ELEMENT{}:LOOP:COUNT {}'.format(line, count))
+
+    @DictFeat(values={True: '1', False: '0'})
+    def seq_loop_infinite(self, line):
+        return self.query('SEQUENCE:ELEMENT{}:LOOP:INFINITE?'.format(line))
+
+    @seq_loop_infinite.setter
+    def seq_loop_infinite(self, line, infinite_loop):
+        self.write('SEQUENCE:ELEMENT{}:LOOP:INFINITE {}'.format(line, infinite_loop))
+
     @Action()
     def jump_to_line(self, line):
         self.write('SEQ:JUMP:IMM {}'.format(line))
