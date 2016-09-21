@@ -69,7 +69,7 @@ class AWG5000(MessageBasedDriver):
 
     @DictFeat(limits=(1, 2 ** 16))
     def seq_loop_count(self, line):
-        return int(self.query('SEQUENCE:ELEMENT{}:LOOP:COUNT?'.format(line))
+        return int(self.query('SEQUENCE:ELEMENT{}:LOOP:COUNT?'.format(line)))
 
     @seq_loop_count.setter
     def seq_loop_count(self, line, count):
