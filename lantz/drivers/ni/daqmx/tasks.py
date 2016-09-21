@@ -225,8 +225,6 @@ class AnalogOutputTask(Task):
             else:
                 samples_per_channel = data.shape[-1]
 
-        print(data)
-
         samps_per_channel = int(samples_per_channel)
 
         err, count = self.lib.WriteAnalogF64(samps_per_channel, auto_start,

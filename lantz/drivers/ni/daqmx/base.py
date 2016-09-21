@@ -1551,7 +1551,6 @@ class Channel(_Base):
         self._task = None
         if task == 'create':
             task = Task.typed_task(self.IO_TYPE)()
-            print(task)
         self.task = task
 
     @property
