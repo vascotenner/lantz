@@ -28,6 +28,7 @@ class AWG5000(MessageBasedDriver):
         'COMMON': {
             'write_termination': '\r\n',
             'read_termination': '\r\n',
+            'timeout': 10000,
         },
     }
 
