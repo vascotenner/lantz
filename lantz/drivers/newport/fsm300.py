@@ -87,3 +87,26 @@ class FSM300(Driver):
             time.sleep((steps / self.ao_smooth_rate).to('s').magnitude)
             self.task.stop()
         self._position = point
+
+
+    @Action()
+    def line_scan(self, init_point, final_point, acq_task):
+        step_voltages = self.ao_smooth_func(init_point, final_point)
+        steps = step_voltages.shape[0]
+        clock_config = {
+            'source': 'OnboardClock',
+            'rate': self.ao_smooth_rate.to('Hz').magnitude,
+            'sample_mode': 'finite',
+            'samples_per_channel': steps,
+        }
+
+        self.abs_position = init_point
+        self.task.configure_timing_sample_clock(**clock_config)
+        acq_task.configure_timing_sample_clock(**clock_config)
+        self.task.configure_trigger_digital_edge_start('ai/StartTrigger')
+        self.task.start()
+        acq_task.start()
+        scanned = acq_task.read(samples_per_channel=steps)
+        acq_task.stop()
+        self.task.stop()
+        return scanned
