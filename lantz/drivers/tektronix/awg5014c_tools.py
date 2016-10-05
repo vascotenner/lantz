@@ -200,7 +200,7 @@ class AWG_File_Writer(object):
         return ss
 
 
-    def get_bytes(self):
+    def get_bytes2(self):
         ans = list()
         for i in range(len(self.records)):
             group_list = self.records[i]
@@ -211,13 +211,13 @@ class AWG_File_Writer(object):
                 subseq_number, cummul_line = 1, 0
                 for ss in group_list:
                     if len(ss.lines) != 0:
-                        ans2 += ss.get_bytes(subseq_number,cummul_line)
+                        ans += ss.get_bytes(subseq_number,cummul_line)
                         subseq_number += 1
                         cummul_line += len(ss.lines)
 
         return b''.join(ans)
 
-    def get_bytes2(self):
+    def get_bytes(self):
         ans = b''
         for i in range(len(self.records)):
             group_list = self.records[i]
@@ -343,5 +343,3 @@ class Sequence(object):
 
     def get_bytes(self):
         return bytes(self.get_str() ,encoding='ascii')
-
-
