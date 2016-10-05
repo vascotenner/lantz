@@ -105,27 +105,40 @@ class FSM300(Driver):
                 'samples_per_channel': steps,
             }
             self.task.configure_timing_sample_clock(**clock_config)
-            self.task.write(data=step_voltages, auto_start=False, timeout=0, group_by='scan')
+            task_config = {
+                'data': step_voltages,
+                'auto_start': False,
+                'timeout': 0,
+                'group_by': 'scan',
+            }
+            self.task.write(**task_config)
             self.task.start()
             time.sleep((steps / self.ao_smooth_rate).to('s').magnitude)
             self.task.stop()
         self._position = point
 
     @Action()
-    def line_scan(self, init_point, final_point, steps, acq_task, acq_rate=Q_('1 kHz')):
+    def line_scan(self, init_point, final_point, steps, acq_task,
+                  acq_rate=Q_('1 kHz'), dwell=1):
         init_point = enforce_point_units(init_point)
         final_point = enforce_point_units(final_point)
-        step_voltages = self.ao_linear_func(init_point, final_point, steps)
+        step_voltages = np.repeat(self.ao_linear_func(init_point, final_point, steps), dwell)
+        self.abs_position = init_point
         clock_config = {
             'source': 'OnboardClock',
             'rate': acq_rate.to('Hz').magnitude,
             'sample_mode': 'finite',
-            'samples_per_channel': steps,
+            'samples_per_channel': steps * dwell,
         }
-        self.abs_position = init_point
         self.task.configure_timing_sample_clock(**clock_config)
         acq_task.configure_timing_sample_clock(**clock_config)
-        self.task.write(data=step_voltages, auto_start=False, timeout=0, group_by='scan')
+        task_config = {
+            'data': step_voltages,
+            'auto_start': False,
+            'timeout': 0,
+            'group_by': 'scan',
+        }
+        self.task.write(**task_config)
         self.task.configure_trigger_digital_edge_start('ai/StartTrigger')
         self.task.start()
         acq_task.start()
