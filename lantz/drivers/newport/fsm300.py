@@ -10,7 +10,7 @@
 """
 
 from lantz import Driver
-from lantz.driver import Feat, DictFeat
+from lantz.driver import Feat, DictFeat, Action
 from lantz.drivers.ni.daqmx import AnalogOutputTask, VoltageOutputChannel
 
 from lantz import Q_
@@ -18,6 +18,16 @@ from lantz import Q_
 import time
 
 import numpy as np
+
+def enforce_point_units(point, units='um'):
+    x, y = point
+    if not isinstance(x, Q_):
+        x = Q_(x, 'um')
+    if not isinstance(y, Q_):
+        y = Q_(y, 'um')
+    point = x, y
+    return point
+
 
 class FSM300(Driver):
 
@@ -59,6 +69,24 @@ class FSM300(Driver):
         step_voltages = np.outer(np.ones(steps), init) + np.outer(versine_steps, diff)
         return step_voltages
 
+    def ao_linear_func(self, init_point, final_point, steps):
+        init_x, init_y = init_point
+        final_x, final_y = final_point
+
+        init_x_voltage, final_x_voltage = init_x / self.cal[0], final_x / self.cal[0]
+        init_y_voltage, final_y_voltage = init_y / self.cal[1], final_y / self.cal[1]
+        diff_x_voltage = final_x_voltage - init_x_voltage
+        diff_y_voltage = final_y_voltage - init_y_voltage
+
+        diff_voltage = max(abs(diff_x_voltage), abs(diff_y_voltage))
+        init = np.array([val.to('V').magnitude for val in [init_x_voltage, init_y_voltage]])
+        diff = np.array([val.to('V').magnitude for val in [diff_x_voltage, diff_y_voltage]])
+
+        linear_steps = np.linspace(0.0, 1.0, steps)
+
+        step_voltages = np.outer(np.ones(steps), init) + np.outer(linear_steps, diff)
+        return step_voltages
+
     @Feat()
     def abs_position(self):
         return self._position
@@ -66,12 +94,7 @@ class FSM300(Driver):
 
     @abs_position.setter
     def abs_position(self, point):
-        x, y = point
-        if not isinstance(x, Q_):
-            x = Q_(x, 'um')
-        if not isinstance(y, Q_):
-            y = Q_(y, 'um')
-        point = x, y
+        point = enforce_point_units(point)
         step_voltages = self.ao_smooth_func(self._position, point)
         if step_voltages.size:
             steps = step_voltages.shape[0]
@@ -88,18 +111,17 @@ class FSM300(Driver):
             self.task.stop()
         self._position = point
 
-
     @Action()
-    def line_scan(self, init_point, final_point, acq_task):
-        step_voltages = self.ao_smooth_func(init_point, final_point)
-        steps = step_voltages.shape[0]
+    def line_scan(self, init_point, final_point, steps, acq_task):
+        init_point = enforce_point_units(init_point)
+        final_point = enforce_point_units(final_point)
+        step_voltages = self.ao_linear_func(init_point, final_point, steps)
         clock_config = {
             'source': 'OnboardClock',
             'rate': self.ao_smooth_rate.to('Hz').magnitude,
             'sample_mode': 'finite',
             'samples_per_channel': steps,
         }
-
         self.abs_position = init_point
         self.task.configure_timing_sample_clock(**clock_config)
         acq_task.configure_timing_sample_clock(**clock_config)
