@@ -27,6 +27,10 @@ class E8257C(MessageBasedDriver):
         }
     }
     
+    @Feat(read_once=True)
+    def idn(self):
+        return self.query('*IDN?')
+
     @Feat(units='V')
     def lf_amplitude(self):
         """
@@ -61,12 +65,12 @@ class E8257C(MessageBasedDriver):
     def lf_toggle(self,value):
         self.write('LFO:STAT {:s}'.format(value))
     
-    @Feat(values={True: 1, False: 0})
+    @Feat(values={True: '1', False: '0'})
     def rf_toggle(self):
         """
         enable or disable RF output
         """
-        return float(self.query('OUTP:STAT?'))
+        return self.query('OUTP:STAT?')
     
     @rf_toggle.setter
     def rf_toggle(self,value):

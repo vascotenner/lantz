@@ -112,13 +112,13 @@ class FSM300(Driver):
         self._position = point
 
     @Action()
-    def line_scan(self, init_point, final_point, steps, acq_task):
+    def line_scan(self, init_point, final_point, steps, acq_task, acq_rate=Q_('1 kHz')):
         init_point = enforce_point_units(init_point)
         final_point = enforce_point_units(final_point)
         step_voltages = self.ao_linear_func(init_point, final_point, steps)
         clock_config = {
             'source': 'OnboardClock',
-            'rate': self.ao_smooth_rate.to('Hz').magnitude,
+            'rate': acq_rate.to('Hz').magnitude,
             'sample_mode': 'finite',
             'samples_per_channel': steps,
         }

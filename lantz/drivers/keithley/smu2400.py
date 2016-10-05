@@ -68,15 +68,6 @@ class SMU2400(MessageBasedDriver):
             return self.write(':VOLT:PROT {}'.format(value))
 
 
-        @Feat(units='A', limits=(-1.05, 1.05,))
-        def current_compliance(self):
-            return self.query(':CURR:PROT?')
-
-        @current_compliance.setter
-        def current_compliance(self, value):
-            return self.write(':CURR:PROT {}'.format(value))
-
-
         @Feat(units='V', limits=(-210., 210.,))
         def sense_voltage_range(self):
             return self.query(':SENS:VOLT:RANG?')
