@@ -105,7 +105,13 @@ class FSM300(Driver):
                 'samples_per_channel': steps,
             }
             self.task.configure_timing_sample_clock(**clock_config)
-            self.task.write(data=step_voltages, auto_start=False, timeout=0, group_by='scan')
+            task_config = {
+                'data': step_voltages,
+                'auto_start': False,
+                'timeout': 0,
+                'group_by': 'scan',
+            }
+            self.task.write(**task_config)
             self.task.start()
             time.sleep((steps / self.ao_smooth_rate).to('s').magnitude)
             self.task.stop()
@@ -123,10 +129,15 @@ class FSM300(Driver):
             'sample_mode': 'finite',
             'samples_per_channel': len(step_voltages),
         }
-        self.abs_position = init_point
         self.task.configure_timing_sample_clock(**clock_config)
         acq_task.configure_timing_sample_clock(**clock_config)
-        self.task.write(data=step_voltages, auto_start=False, timeout=0, group_by='scan')
+        task_config = {
+            'data': step_voltages,
+            'auto_start': False,
+            'timeout': 0,
+            'group_by': 'scan',
+        }
+        self.task.write(**task_config)
         self.task.configure_trigger_digital_edge_start('ai/StartTrigger')
         self.task.start()
         acq_task.start()
