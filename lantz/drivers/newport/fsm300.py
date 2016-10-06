@@ -112,15 +112,16 @@ class FSM300(Driver):
         self._position = point
 
     @Action()
-    def line_scan(self, init_point, final_point, steps, acq_task, acq_rate=Q_('1 kHz')):
+    def line_scan(self, init_point, final_point, steps, acq_task, acq_rate=Q_('100 kHz'), pts_per_pos=100):
         init_point = enforce_point_units(init_point)
         final_point = enforce_point_units(final_point)
         step_voltages = self.ao_linear_func(init_point, final_point, steps)
+        step_voltages = np.repeat(step_voltages, pts_per_pos, axis=0)
         clock_config = {
             'source': 'OnboardClock',
             'rate': acq_rate.to('Hz').magnitude,
             'sample_mode': 'finite',
-            'samples_per_channel': steps,
+            'samples_per_channel': len(step_voltages),
         }
         self.abs_position = init_point
         self.task.configure_timing_sample_clock(**clock_config)
@@ -129,7 +130,8 @@ class FSM300(Driver):
         self.task.configure_trigger_digital_edge_start('ai/StartTrigger')
         self.task.start()
         acq_task.start()
-        scanned = acq_task.read(samples_per_channel=steps)
+        scanned = acq_task.read(samples_per_channel=len(step_voltages))
         acq_task.stop()
         self.task.stop()
-        return scanned
+        nb_chan = scanned.shape[0]
+        return scanned.reshape((nb_chan,steps,pts_per_pos)).mean(axis=2)
