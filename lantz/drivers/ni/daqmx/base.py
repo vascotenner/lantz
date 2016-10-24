@@ -963,6 +963,10 @@ class Task(_Base):
         else:
             edge_val = int(Constants.Val_Rising)
 
+        if edge == Constants.Val_Falling:
+            edge_val = int(Constants.Val_Falling)
+        else:
+            edge_val = int(Constants.Val_Rising)
 
         self.lib.CfgDigEdgeStartTrig(source, edge_val)
 
@@ -1357,7 +1361,6 @@ class Task(_Base):
         err, value = self.lib.GetDigEdgeArmStartTrigSrc(RetStr(default_buf_size))
         return value
 
-    @arm_start_trigger_source.setter
     @arm_start_trigger_source.setter
     def arm_start_trigger_source(self, source):
         source = str (source)

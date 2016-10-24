@@ -176,17 +176,26 @@ class DigitalInputChannel(Channel):
         'all_lines' - One channel for all lines
     """
 
+    CHANNEL_TYPE = 'DI'
+
+    CREATE_FUN = 'CreateDIChan'
+
+
 
     def __init__(self, lines, name='', group_by='line'):
 
         if group_by == 'line':
-            grouping_val = Constants.ChanPerLine
+            grouping_val = Constants.Val_ChanPerLine
             self.one_channel_for_all_lines = False
         else:
-            grouping_val = Constants.ChanForAllLines
+            grouping_val = Constants.Val_ChanForAllLines
             self.one_channel_for_all_lines = True
 
-        self.lib.CreateDIChan(lines, name, grouping_val)
+        self._create_args = (lines, name, grouping_val)
+
+        super().__init__()#task=task, name=name)
+
+        #self.lib.CreateDIChan(lines, name, grouping_val)
 
 
 class DigitalOutputChannel(Channel):
@@ -203,16 +212,22 @@ class DigitalOutputChannel(Channel):
     See DigitalInputChannel
     """
 
+    CHANNEL_TYPE = 'DO'
+
+    CREATE_FUN = 'CreateDOChan'
+
     def __init__(self, lines, name='', group_by='line'):
 
         if group_by == 'line':
-            grouping_val = Constants.ChanPerLine
+            grouping_val = Constants.Val_ChanPerLine
             self.one_channel_for_all_lines = False
         else:
-            grouping_val = Constants.ChanForAllLines
+            grouping_val = Constants.Val_ChanForAllLines
             self.one_channel_for_all_lines = True
 
-        self.lib.CreateDOChan(lines, name, grouping_val)
+        self._create_args = (lines, name, grouping_val)
+
+        super().__init__()#task=task, name=name)
 
 
 class CountEdgesChannel(Channel):
@@ -275,7 +290,6 @@ class CountEdgesChannel(Channel):
     CHANNEL_TYPE = 'CI'
 
     CREATE_FUN = 'CreateCICountEdgesChan'
-
 
     def __init__ (self, phys_counter, name="", edge='rising', init=0, direction='up', task=None):
 
@@ -568,6 +582,61 @@ class CounterOutTicksChannel(Channel):
     CREATE_FUN = 'DAQmxCreateCOPulseChanTicks'
 
 
+
+    def __init__(self, counter, name='', source_terminal='', idle_state='high', init_delay=1, low_ticks=10, high_ticks=10,
+                 task=None):
+        """
+        Create channel(s) to generate digital pulses defined by the number of timebase ticks that the pulse is at a
+        high state and the number of timebase ticks that the pulse is at a low state and also adds the channel to the
+        task you specify with taskHandle. The pulses appear on the default output terminal of the counter unless you
+        select a different output terminal.
+
+
+        Args:
+            taskHandle:	TaskHandle to which to add the channels that this function creates.
+
+            counter: Name of the counter to use to create virtual channels. You can specify a list or range of physical
+            channels.
+
+            nameToAssignToChannel: (string) name(s) to assign to the created virtual channel(s). If you do not specify
+            a name, NI-DAQmx uses the physical channel name as the virtual channel name. If you specify your own names
+            for nameToAssignToChannel, you must use the names when you refer to these channels in other NI-DAQmx
+            functions. If you create multiple virtual channels with one call to this function, you can specify a list
+            of names separated by commas. If you provide fewer names than the number of virtual channels you create,
+            NI-DAQmx automatically assigns names to the virtual channels.
+
+            sourceTerminal: (string) terminal to which you connect an external timebase. You also can specify a source
+            terminal by using a terminal name.
+
+            idleState: (int32) resting state of the output terminal.
+                Value		Description
+                DAQmx_Val_High		High state.
+                DAQmx_Val_Low		Low state.
+
+            initialDelay: (int32) number of timebase ticks to wait before generating the first pulse.
+
+            lowTicks: (int32) The number of timebase ticks that the pulse is low.
+
+            highTicks: (int32) number of timebase ticks that the pulse is high.
+
+        Returns:
+
+            status: The error code returned by the function in the event of an error or warning. A value of 0
+            indicates success. A positive value indicates a warning. A negative value indicates an error.
+
+        """
+
+        if idle_state == 'high':
+            idle_state_val = Constants.Val_High
+        else:
+            idle_state_val == 'low'
+
+
+
+        self._create_args = (counter, name, source_terminal, idle_state_val, init_delay, low_ticks, high_ticks)
+
+
+        super().__init__(name=name, task=task)
 
     def __init__(self, counter, name='', source_terminal='', idle_state='high', init_delay=1, low_ticks=10, high_ticks=10,
                  task=None):
