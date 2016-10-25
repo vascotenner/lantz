@@ -4,7 +4,7 @@
     ~~~~~~~~~~~~~~~~
 
     :company: National Instruments
-    :description: 
+    :description:
     :website: http://www.ni.com/
 
     ----
@@ -13,5 +13,4 @@
     :license: BSD, see LICENSE for more details.
 """
 
-from . import daqmx
-
+# from . import daqmx
