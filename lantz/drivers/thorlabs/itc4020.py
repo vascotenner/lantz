@@ -9,13 +9,17 @@ from time import sleep
 class ITC4020(MessageBasedDriver):
 
 
-    DEFAULTS = {'COMMON': {'write_termination': '\n',
-                           'read_termination': '\n'}}
+    DEFAULTS = {
+        'COMMON': {
+            'write_termination': '\n',
+            'read_termination': '\n'
+        }
+    }
 
     COM_DELAY = 0.2
 
     def write(self, *args, **kwargs):
-        super(ITC4020, self).write(*args, **kwargs)
+        super().write(*args, **kwargs)
         sleep(self.COM_DELAY)
         return
 
@@ -65,7 +69,7 @@ class ITC4020(MessageBasedDriver):
     def ld_current_setpoint(self):
         return float(self.query('SOUR:CURR?'))
 
-    @Feat(units='A', limits=(0,1))
+    @Feat(units='A', limits=(0.0, 1.0))
     def ld_current(self):
         return float(self.query('MEAS:CURR?'))
 
