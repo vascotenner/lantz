@@ -142,7 +142,7 @@ class FSM300(Driver):
         self.task.configure_trigger_digital_edge_start('ai/StartTrigger')
         self.task.start()
         acq_task.start()
-        scanned = acq_task.read(samples_per_channel=steps)
+        scanned = acq_task.read(samples_per_channel=steps * dwell)
         acq_task.stop()
         self.task.stop()
         return scanned
