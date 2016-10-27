@@ -14,43 +14,6 @@ from datetime import datetime as _dt
 import time as _t
 import sys
 
-def array_to_iee_block1(analog, marker1, marker2, prepend_length=True):
-    """
-        Produces a little-endian 4-byte floating point + 1-byte marker representation of analog
-        :param analog: Array of float
-        :param marker1: Array of bool (or 1/0)
-        :param marker2: Array of bool (or 1/0)
-        :return: Byte Stream in the WFM format
-    """
-    last = _t.time()
-    n = len(analog)
-    num_bytes = 5 * n
-    num_digit = len(str(num_bytes))
-    analog_fmt_str = '<{:d}f'.format(n)
-    marker_fmt_str = '<{:d}B'.format(n)
-    print(_t.time()-last )
-    last = _t.time()
-    bin_analog = struct.pack(analog_fmt_str, *analog)
-    print(_t.time() - last)
-    last = _t.time()
-    bin_marker = struct.pack(marker_fmt_str, *((b1 + (b2 << 1))<<6 for b1, b2 in zip(marker1, marker2)))
-    print(_t.time() - last)
-    last = _t.time()
-    bin_analog_bytes = list(bin_analog[4 * i:4 * (i + 1)] for i in range(0, n))
-    print(_t.time() - last)
-    last = _t.time()
-    array = zip(bin_analog_bytes, bin_marker)
-    print(_t.time() - last)
-    last = _t.time()
-    bin_all = b''.join(
-        b''.join((w, m.to_bytes(1, byteorder='little'))) for w, m in array)
-    print(_t.time() - last)
-    last = _t.time()
-    print("-----------------")
-    if prepend_length:  return bytes('#{:d}{:d}'.format(num_digit, num_bytes), encoding='ascii') + bin_all
-    else             :  return bin_all
-
-
 def array_to_ieee_block(analog, marker1, marker2, prepend_length=True):
     """
         Produces a little-endian 4-byte floating point + 1-byte marker representation of analog
@@ -200,7 +163,7 @@ class AWG_File_Writer(object):
         return ss
 
 
-    def get_bytes2(self):
+    def get_bytes(self):
         ans = list()
         for i in range(len(self.records)):
             group_list = self.records[i]
@@ -216,23 +179,6 @@ class AWG_File_Writer(object):
                         cummul_line += len(ss.lines)
 
         return b''.join(ans)
-
-    def get_bytes(self):
-        ans = b''
-        for i in range(len(self.records)):
-            group_list = self.records[i]
-            if not i == 6:
-                for entry in group_list:
-                    ans += entry.get_bytes()
-            else:
-                # Special treatement for subseq group
-                subseq_number, cummul_line = 1, 0
-                for ss in group_list:
-                    if len(ss.lines) != 0:
-                        ans += ss.get_bytes(subseq_number, cummul_line)
-                        subseq_number += 1
-                        cummul_line += len(ss.lines)
-        return ans
 
 class Sub_Sequence(object):
     def __init__(self, name):
