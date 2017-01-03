@@ -13,7 +13,12 @@
 
 from lantz.driver import Driver
 from lantz import Feat, DictFeat, Action
-import XPS_Q8_drivers
+# try:
+#     from . import XPS_Q8_drivers
+# except SystemError:
+#     import XPS_Q8_drivers
+from . import XPS_Q8_drivers
+
 
 class XPSQ8(Driver):
 
@@ -56,6 +61,10 @@ class XPSQ8(Driver):
     def rel_position(self, channel, dposition):
         retval = self._xps.GroupMoveRelative(self._socket_id, channel, [dposition])
 
+    @Action()
+    def jog(self, channel, velocity, acceleration):
+        retval = self._xps.GroupJogParametersSet(self._socket_id, channel, [velocity], [acceleration])
+
 def main():
     import logging
     import sys
@@ -64,6 +73,12 @@ def main():
     log_to_screen(logging.CRITICAL)
     res_name = sys.argv[1]
     with XPSQ8(res_name) as inst:
+        value = inst._xps.GroupJogParametersGet(inst._socket_id, 'Group1.Pos', 1)
+        ret = inst._xps.GroupJogParametersSet(inst._socket_id, 'Group2.Pos', [-0.0,], [1.0,])
+        print(ret)
+        value = inst._xps.GroupJogParametersGet(inst._socket_id, 'Group2.Pos', 1)
+        print(value)
+        return
         positions = np.linspace(-12.5, 12.5, 20)
         for val in positions:
             print(val)

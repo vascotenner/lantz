@@ -962,6 +962,10 @@ class Task(_Base):
         else:
             edge_val = int(Constants.Val_Rising)
 
+        if edge == Constants.Val_Falling:
+            edge_val = int(Constants.Val_Falling)
+        else:
+            edge_val = int(Constants.Val_Rising)
 
         self.lib.CfgDigEdgeStartTrig(source, edge_val)
 
@@ -1364,7 +1368,7 @@ class Task(_Base):
         else:
             self.lib.SetDigEdgeArmStartTrigSrc(source)
 
-    @Feat(values={None: None}.update(_EDGE_TYPES))
+    @Feat(values=dict({None: None}, **_EDGE_TYPES))
     def arm_start_trigger_edge(self):
         """on which edge of a digital signal to arm the task
         for a Start Trigger
@@ -1380,7 +1384,7 @@ class Task(_Base):
         else:
             self.lib.SetDigEdgeArmStartTrigEdge(edge)
 
-    @Feat(values={None: None}.update(_TRIGGER_TYPES))
+    @Feat(values=dict({None: None}, **_TRIGGER_TYPES))
     def pause_trigger_type(self):
         """The type of trigger to use to pause a task.
 
@@ -1469,7 +1473,7 @@ class Task(_Base):
             raise ValueError(val)
 
     @pause_trigger_when.setter
-    def pause_trigger_when (self, when=None):
+    def pause_trigger_when(self, when=None):
 
         if when is None:
             self.lib.ResetDigLvlPauseTrigWhen()
@@ -1490,7 +1494,7 @@ class Task(_Base):
 
         fun(convert[when])
 
-    def read_current_position (self):
+    def read_current_position(self):
         """Samples per channel the current position in the buffer.
         """
         err, value = self.lib.GetReadCurrReadPos(*RetValue('u64'))
