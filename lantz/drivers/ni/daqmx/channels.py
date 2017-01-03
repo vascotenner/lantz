@@ -176,17 +176,26 @@ class DigitalInputChannel(Channel):
         'all_lines' - One channel for all lines
     """
 
+    CHANNEL_TYPE = 'DI'
+
+    CREATE_FUN = 'CreateDIChan'
+
+
 
     def __init__(self, lines, name='', group_by='line'):
 
         if group_by == 'line':
-            grouping_val = Constants.ChanPerLine
+            grouping_val = Constants.Val_ChanPerLine
             self.one_channel_for_all_lines = False
         else:
-            grouping_val = Constants.ChanForAllLines
+            grouping_val = Constants.Val_ChanForAllLines
             self.one_channel_for_all_lines = True
 
-        self.lib.CreateDIChan(lines, name, grouping_val)
+        self._create_args = (lines, name, grouping_val)
+
+        super().__init__()#task=task, name=name)
+
+        #self.lib.CreateDIChan(lines, name, grouping_val)
 
 
 class DigitalOutputChannel(Channel):
@@ -203,16 +212,22 @@ class DigitalOutputChannel(Channel):
     See DigitalInputChannel
     """
 
+    CHANNEL_TYPE = 'DO'
+
+    CREATE_FUN = 'CreateDOChan'
+
     def __init__(self, lines, name='', group_by='line'):
 
         if group_by == 'line':
-            grouping_val = Constants.ChanPerLine
+            grouping_val = Constants.Val_ChanPerLine
             self.one_channel_for_all_lines = False
         else:
-            grouping_val = Constants.ChanForAllLines
+            grouping_val = Constants.Val_ChanForAllLines
             self.one_channel_for_all_lines = True
 
-        self.lib.CreateDOChan(lines, name, grouping_val)
+        self._create_args = (lines, name, grouping_val)
+
+        super().__init__()#task=task, name=name)
 
 
 class CountEdgesChannel(Channel):

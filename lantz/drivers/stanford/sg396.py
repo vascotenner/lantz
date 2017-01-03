@@ -121,7 +121,7 @@ class SG396(MessageBasedDriver):
             """
             Modulation State
             """
-            return self.query('MODL?')
+            return int(self.query('MODL?'))
 
         @mod_toggle.setter
         def mod_toggle(self, value):
