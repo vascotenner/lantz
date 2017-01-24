@@ -41,7 +41,7 @@ class SMU2400(MessageBasedDriver):
             self.write(':CONF:{}'.format(value))
 
 
-        @Feat(values={'OFF':'0', 'ON':'1'})
+        @Feat(values={False:'0', True:'1'})
         def output(self):
             return self.query(':OUTP:STAT?')
 

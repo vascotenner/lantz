@@ -225,6 +225,8 @@ class AnalogOutputTask(Task):
             else:
                 samples_per_channel = data.shape[-1]
 
+        #print(data)
+
         samps_per_channel = int(samples_per_channel)
 
         err, count = self.lib.WriteAnalogF64(samps_per_channel, auto_start,
@@ -524,7 +526,8 @@ class CounterInputTask(Task):
             samples_per_channel = self.samples_per_channel_available()
 
         data = np.zeros((samples_per_channel,),dtype=np.int32)
-        
+
+
         err, count = self.lib.ReadCounterU32(samples_per_channel, float(timeout),
                                              data.ctypes.data, data.size, RetValue('i32'), None)
 

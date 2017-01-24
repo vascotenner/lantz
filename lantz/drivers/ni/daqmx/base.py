@@ -1,4 +1,4 @@
-"""
+﻿"""
     lantz.drivers.ni.daqmx.base
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -956,9 +956,8 @@ class Task(_Base):
           Specifies on which edge of a digital signal to start
           acquiring or generating samples: rising or falling edge(s).
         """
-        from ctypes import c_wchar_p
 
-        if edge == 'falling':
+        if edge == Constants.Val_Falling:
             edge_val = int(Constants.Val_Falling)
         else:
             edge_val = int(Constants.Val_Rising)
@@ -1554,6 +1553,7 @@ class Channel(_Base):
         self._task = None
         if task == 'create':
             task = Task.typed_task(self.IO_TYPE)()
+            print(task)
         self.task = task
 
     @property
