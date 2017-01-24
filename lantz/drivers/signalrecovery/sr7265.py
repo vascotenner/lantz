@@ -26,8 +26,12 @@ class SR7265(MessageBasedDriver):
     SDC=ADF 1 ENABLED
     """
 
-    DEFAULTS = {'COMMON': {'write_termination': '',
-                           'read_termination': ''}}
+    DEFAULTS = {
+        'COMMON': {
+            'write_termination': '',
+            'read_termination': ''
+        }
+    }
 
     INT_EXT_REF = OrderedDict([
                    ('int', 0),
@@ -111,6 +115,10 @@ class SR7265(MessageBasedDriver):
                     ('1V', 27),
                     ])
 
+    def remove_null(self, value):
+        value = value.replace('\x00', '')
+        return value
+
     @Feat()
     def idn(self):
         """
@@ -118,53 +126,47 @@ class SR7265(MessageBasedDriver):
         """
         return self.query('ID')
 
-    @Feat()
+    @Feat(units='V')
     def x(self):
         """
         Read x value from lockin.
         """
-        read = self.query('X.')
-        return float(read.replace('\x00', ''))
+        return float(self.remove_null(self.query('X.')))
 
-    @Feat()
+    @Feat(units='V')
     def y(self):
         """
         Read y value from lockin.
         """
-        read = self.query('Y.')
-        return float(read.replace('\x00', ''))
+        return float(self.remove_null(self.query('Y.')))
 
     @Feat()
     def xy(self):
         """
         Read x and y values from lockin simultaneously.
         """
-        read = self.query('XY.')
-        return [float(x) for x in read.replace('\x00', '').split(',')]
+        return [float(value) for value in self.remove_null(self.query('XY.')).split(',')]
 
     @Feat()
     def magnitude(self):
         """
         Read signal magnitude from lockin.
         """
-        read = self.query('MAG.')
-        return float(read.replace('\x00', ''))
+        return float(self.remove_null(self.query('MAG.')))
 
     @Feat()
     def phase(self):
         """
         Read signal phase from lockin.
         """
-        read = self.query('PHA.')
-        return float(read.replace('\x00', ''))
+        return float(self.remove_null(self.query('PHA.')))
 
     @Feat()
     def mag_phase(self):
         """
         Read signal magnitude and phase from lockin.
         """
-        read = self.query('MP.')
-        return [float(x) for x in read.replace('\x00', '').split(',')]
+        return [float(value) for value in self.remove_null(self.query('MP.')).split(',')]
 
     @Action()
     def autophase(self):
@@ -208,22 +210,21 @@ class SR7265(MessageBasedDriver):
         """
         Read current signal frequency.
         """
-        read = self.query('FRQ.')
-        return float(read.replace('\x00', ''))
+        return float(self.remove_null(self.query('FRQ.')))
 
     @Feat(limits=(0, 250e3))
     def oscillator_freq(self):
         """
         Read internal oscillator frequency.
         """
-        return float(self.query('OF.'))
+        return float(self.remove_null(self.query('OF.')))
 
     @oscillator_freq.setter
     def oscillator_freq(self, frequency):
         """
         Set internal oscillator frequency.
         """
-        return self.write('OF.{}'.format(frequency))
+        self.write('OF.{}'.format(frequency))
 
     @Feat(values=AC_GAINS)
     def gain(self):
@@ -237,7 +238,7 @@ class SR7265(MessageBasedDriver):
         """
         Set current AC gain (dB)
         """
-        return self.write('ACGAIN{}'.format(gain_value))
+        self.write('ACGAIN{}'.format(gain_value))
 
     @Feat(values=SENSITIVITIES)
     def sensitivity(self):
@@ -246,19 +247,12 @@ class SR7265(MessageBasedDriver):
         """
         return int(self.query('SEN'))
 
-    # @Feat(values=SENSITIVITIES)
-    # def sensitivity_int(self):
-    #     """
-    #     Returns integer value of sensitivity as described by SENSITIVITIES.
-    #     """
-    #     return int(self.query('SEN'))
-
     @sensitivity.setter
     def sensitivity(self, sen_it):
         """
         Sets value of sensitivity as described by SENSITIVITIES.
         """
-        return self.write('SEN{}'.format(sen_it))
+        self.write('SEN{}'.format(sen_it))
 
     @Action()
     def autosensitivity(self):
@@ -292,6 +286,22 @@ class SR7265(MessageBasedDriver):
         Set lockin to be internal or external reference
         """
         return self.write('IE {}'.format(value))
+
+    def status_byte(self):
+        return int(self.query('ST'))
+
+    def get_bit(self, byte, bit):
+        return True if int('{0:b}'.format(byte)[:-(bit + 1)]) else False
+
+    @Feat()
+    def reference_unlock(self):
+        return self.get_bit(self.status_byte(), 3)
+
+    @Feat()
+    def overload(self):
+        return self.get_bit(self.status_byte(), 4)
+
+
 
 if __name__ == '__main__':
     with SR7265.via_gpib(7) as inst:
