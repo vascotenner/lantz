@@ -291,7 +291,7 @@ class SR7265(MessageBasedDriver):
         return int(self.query('ST'))
 
     def get_bit(self, byte, bit):
-        return True if int('{0:b}'.format(byte)[:-(bit + 1)]) else False
+        return True if int('{0:b}'.format(byte)[-(bit + 1)]) else False
 
     @Feat()
     def reference_unlock(self):
