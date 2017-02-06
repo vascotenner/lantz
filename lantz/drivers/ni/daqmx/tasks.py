@@ -27,6 +27,7 @@ class AnalogInputTask(Task):
     """
 
     IO_TYPE = 'AI'
+    CHANNEL_TYPE = 'AI'
 
     @Feat()
     def max_convert_rate(self):
@@ -151,6 +152,7 @@ class AnalogOutputTask(Task):
     """Analog Output Task
     """
 
+    IO_TYPE = 'AO'
     CHANNEL_TYPE = 'AO'
 
 
@@ -348,6 +350,7 @@ class DigitalInputTask(DigitalTask):
     """
 
     IO_TYPE = 'DI'
+    CHANNEL_TYPE = 'DI'
 
 
 
@@ -355,6 +358,7 @@ class DigitalOutputTask(DigitalTask):
     """Exposes NI-DAQmx digital output task to Python.
     """
 
+    IO_TYPE = 'DO'
     CHANNEL_TYPE = 'DO'
 
 
@@ -451,6 +455,7 @@ class CounterInputTask(Task):
     """Exposes NI-DAQmx counter input task to Python.
     """
 
+    IO_TYPE = 'CI'
     CHANNEL_TYPE = 'CI'
 
 
@@ -540,7 +545,8 @@ class CounterOutputTask(Task):
     """Exposes NI-DAQmx counter output task to Python.
     """
 
-    channel_type = 'CO'
+    IO_TYPE = 'CO'
+    CHANNEL_TYPE = 'CO'
 
 
 Task.register_class(AnalogInputTask)
