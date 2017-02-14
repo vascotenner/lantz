@@ -25,6 +25,7 @@ from functools import partial
 from distutils.version import LooseVersion
 
 # Available APIs.
+QT_API_PYQT5 = 'pyqt5'
 QT_API_PYQT = 'pyqt'
 QT_API_PYQTv1 = 'pyqtv1'
 QT_API_PYQT_DEFAULT = 'pyqtdefault' # don't set SIP explicitly
@@ -83,6 +84,7 @@ def commit_api(api):
 
     if api == QT_API_PYSIDE:
         ID.forbid('PyQt4')
+        ID.forbid('PyQt5')
     else:
         ID.forbid('PySide')
 
@@ -102,13 +104,15 @@ def loaded_api():
             return QT_API_PYQT
         else:
             return QT_API_PYQTv1
+    elif 'PyQt5.QtCore' in sys.modules:
+        return QT_API_PYQT5
     elif 'PySide.QtCore' in sys.modules:
         return QT_API_PYSIDE
     return None
 
 
 def has_binding(api):
-    """Safely check for PyQt4 or PySide, without importing
+    """Safely check for PyQt4, PyQt5 or PySide, without importing
        submodules
 
        Parameters
@@ -130,7 +134,8 @@ def has_binding(api):
     module_name = {QT_API_PYSIDE: 'PySide',
                    QT_API_PYQT: 'PyQt4',
                    QT_API_PYQTv1: 'PyQt4',
-                   QT_API_PYQT_DEFAULT: 'PyQt4'}
+                   QT_API_PYQT_DEFAULT: 'PyQt4',
+                   QT_API_PYQT5: 'PyQt5'}
     module_name = module_name[api]
 
     import importlib
@@ -213,6 +218,20 @@ def import_pyqt4(version=2):
     # query for the API version (in case version == None)
     version = sip.getapi('QString')
     api = QT_API_PYQTv1 if version == 1 else QT_API_PYQT
+    return QtCore, QtGui, QtSvg, api
+
+
+def import_pyqt5():
+    from PyQt5 import QtGui, QtCore, QtSvg
+
+    # Alias PyQt-specific functions for PySide compatibility.
+    QtCore.Signal = QtCore.pyqtSignal
+    QtCore.Slot = QtCore.pyqtSlot
+
+    from PyQt5.uic import loadUi
+    QtGui.loadUi = loadUi
+    api = QT_API_PYQT5
+
     return QtCore, QtGui, QtSvg, api
 
 
@@ -350,6 +369,7 @@ def load_qt(api_options):
                QT_API_PYQT: import_pyqt4,
                QT_API_PYQTv1: partial(import_pyqt4, version=1),
                QT_API_PYQT_DEFAULT: partial(import_pyqt4, version=None),
+               QT_API_PYQT5: import_pyqt5,
                QT_MOCK: import_qtmock
                }
 
@@ -357,8 +377,8 @@ def load_qt(api_options):
 
         if api not in loaders:
             raise RuntimeError(
-                "Invalid Qt API %r, valid values are: %r, %r, %r, %r, %r" %
-                (api, QT_API_PYSIDE, QT_API_PYQT,
+                "Invalid Qt API %r, valid values are: %r, %r, %r, %r, %r, %r" %
+                (api, QT_API_PYSIDE, QT_API_PYQT, QT_API_PYQT5,
                  QT_API_PYQTv1, QT_API_PYQT_DEFAULT, QT_MOCK))
 
         if not can_import(api):
@@ -377,9 +397,11 @@ def load_qt(api_options):
 
     Currently-imported Qt library:   %r
     PyQt4 installed:                 %s
+    PyQt5 installed:                 %s
     PySide >= 1.0.3 installed:       %s
     Tried to load:                   %r
     """ % (loaded_api(),
            has_binding(QT_API_PYQT),
+           has_binding(QT_API_PYQT5),
            has_binding(QT_API_PYSIDE),
            api_options))
