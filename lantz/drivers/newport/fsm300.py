@@ -37,9 +37,7 @@ class FSM300(Driver):
                  cal=(Q_(9.5768, 'um/V'), Q_(7.1759, 'um/V'))):
         x_limits_mag = tuple(float(val / Q_('1 V')) for val in limits[0])
         y_limits_mag = tuple(float(val / Q_('1 V')) for val in limits[1])
-        self.task = AnalogOutputTask('fsm300')
-        VoltageOutputChannel(x_ao_ch, name='fsm_x', min_max=x_limits_mag, units='volts', task=self.task)
-        VoltageOutputChannel(y_ao_ch, name='fsm_y', min_max=y_limits_mag, units='volts', task=self.task)
+
         self.ao_smooth_rate = ao_smooth_rate
         self.ao_smooth_steps = ao_smooth_steps
         self.cal = cal
@@ -49,6 +47,17 @@ class FSM300(Driver):
         super().__init__()
 
         return
+
+    def initialize(self):
+        self.task = AnalogOutputTask('fsm300')
+        VoltageOutputChannel(x_ao_ch, name='fsm_x', min_max=x_limits_mag, units='volts', task=self.task)
+        VoltageOutputChannel(y_ao_ch, name='fsm_y', min_max=y_limits_mag, units='volts', task=self.task)
+        super().initialize()
+
+    def finalize(self):
+        self.task.clear()
+        super().finalize()
+
 
     def ao_smooth_func(self, init_point, final_point):
         init_x, init_y = init_point
