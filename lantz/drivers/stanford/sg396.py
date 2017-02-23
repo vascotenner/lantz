@@ -80,14 +80,6 @@ class SG396(MessageBasedDriver):
             self.write('FREQ{:.2f}'.format(value))
 
         @Feat()
-        def rf_pll_loop_filter_mode(self):
-            raise NotImplementedError
-
-        @rf_pll_loop_filter_mode.setter
-        def rf_pll_loop_filter_mode(self, value):
-            raise NotImplementedError
-
-        @Feat()
         def lf_offset(self):
             """
             low frequency offset voltage
@@ -132,7 +124,7 @@ class SG396(MessageBasedDriver):
             """
             Modulation State
             """
-            return self.query('TYPE?')
+            return int(self.query('TYPE?'))
 
         @mod_type.setter
         def mod_type(self, value):
