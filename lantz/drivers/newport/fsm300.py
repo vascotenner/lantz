@@ -121,28 +121,68 @@ class FSM300(Driver):
     def line_scan(self, init_point, final_point, steps, acq_task, acq_rate=Q_('100 kHz'), pts_per_pos=100):
         init_point = enforce_point_units(init_point)
         final_point = enforce_point_units(final_point)
+
+        # AO smooth move to initial point
+        self.abs_position = init_point
         step_voltages = self.ao_linear_func(init_point, final_point, steps)
-        step_voltages = np.repeat(step_voltages, pts_per_pos, axis=0)
-        clock_config = {
-            'source': 'OnboardClock',
-            'rate': acq_rate.to('Hz').magnitude,
-            'sample_mode': 'finite',
-            'samples_per_channel': len(step_voltages),
-        }
-        self.task.configure_timing_sample_clock(**clock_config)
-        acq_task.configure_timing_sample_clock(**clock_config)
-        task_config = {
-            'data': step_voltages,
-            'auto_start': False,
-            'timeout': 0,
-            'group_by': 'scan',
-        }
-        self.task.write(**task_config)
-        self.task.configure_trigger_digital_edge_start('ai/StartTrigger')
-        self.task.start()
-        acq_task.start()
-        scanned = acq_task.read(samples_per_channel=len(step_voltages))
-        acq_task.stop()
-        self.task.stop()
-        nb_chan = scanned.shape[0]
-        return scanned.reshape((nb_chan,steps,pts_per_pos)).mean(axis=2)
+        if acq_task.IO_TYPE == 'CI':
+            chs = acq_task.channels.keys()
+            if not chs:
+                raise ValueError('acquisition task must have at least one channel')
+            ch = chs[0]
+            dev = ch.split('/')[0]
+
+            step_voltages = np.repeat(step_voltages, pts_per_pos + 1, axis=0)
+            clock_config = {
+                'rate': acq_rate.to('Hz').magnitude,
+                'sample_mode': 'finite',
+                'samples_per_channel': len(step_voltages),
+            }
+            self.task.configure_timing_sample_clock(**clock_config)
+            clock_config = {
+                'source': '{}/ao/SampleClock'.format(dev),
+                'rate': acq_rate.to('Hz').magnitude,
+                'sample_mode': 'finite',
+                'samples_per_channel': len(step_voltages),
+            }
+            acq_task.configure_timing_sample_clock(**clock_config)
+            task_config = {
+                data': step_voltages,
+                'auto_start': False,
+                'timeout': 0,
+                'group_by': 'scan',
+            }
+            acq_task.arm_start_trigger_source = '{}/ao/StartTrigger'.format(dev)
+            acq_task.arm_start_trigger_type = 'digital_edge'
+            acq_task.start()
+            scanned = acq_task.read(samples_per_channel=len(step_voltages))
+            acq_task.stop()
+            self.task.stop()
+        elif acq_task.IO_TYPE == 'AI':
+            step_voltages = np.repeat(step_voltages, pts_per_pos, axis=0)
+            clock_config = {
+                'source': 'OnboardClock',
+                'rate': acq_rate.to('Hz').magnitude,
+                'sample_mode': 'finite',
+                'samples_per_channel': len(step_voltages),
+            }
+            self.task.configure_timing_sample_clock(**clock_config)
+            acq_task.configure_timing_sample_clock(**clock_config)
+            task_config = {
+                'data': step_voltages,
+                'auto_start': False,
+                'timeout': 0,
+                'group_by': 'scan',
+            }
+            self.task.write(**task_config)
+            self.task.configure_trigger_digital_edge_start('ai/StartTrigger')
+            self.task.start()
+            acq_task.start()
+            scanned = acq_task.read(samples_per_channel=len(step_voltages))
+            acq_task.stop()
+            self.task.stop()
+        else:
+            pass
+        scanned = scanned.reshape((steps, pts_per_pos + 1))
+        averaged = np.diff(scanned).mean(axis=1)
+        return averaged
