@@ -50,11 +50,11 @@ class ITC4020(MessageBasedDriver):
 
     @Action()
     def read_error_queue(self):
-        no_error = "+0,'No error'"
-        error = inst.query('SYST:ERR:NEXT?')
-        while(error != no_error):
+        error = self.query('SYST:ERR:NEXT?')
+        print(error)
+        while(not 'No error' in error):
+            error = self.query('SYST:ERR:NEXT?')
             print(error)
-            error = inst.query('SYST:ERR:NEXT?')
 
 
     @Feat(values={False: '0', True: '1'})
@@ -95,51 +95,59 @@ class ITC4020(MessageBasedDriver):
     def tec_state(self, value):
         self.write('OUTP2:STAT {}'.format(value))
 
+    @Feat(values={False: '0', True: '1'})
+    def ld_state(self):
+        return self.query('OUTP1:STAT?')
+
+    @ld_state.setter
+    def ld_state(self, value):
+        self.write('OUTP1:STAT {}'.format(value))
 
 
 
-    @Action()
-    def turn_on_seq(self, temp_error=0.05, current_error=0.005):
-        if self.output_state:
-            print("Laser is already ON!")
-            return
 
-        #Turn ON sequence:
-        #   1. TEC ON
-        #   2. Wait for temperature == set_temperature
-        #   3. LD ON
-        #   4. Wait for current == set_current
+    # @Action()
+    # def turn_on_seq(self, temp_error=0.05, current_error=0.005):
+    #     if self.output_state:
+    #         print("Laser is already ON!")
+    #         return
 
-        # 1. TEC ON
-        self.write('OUTP2:STAT ON')
+    #     #Turn ON sequence:
+    #     #   1. TEC ON
+    #     #   2. Wait for temperature == set_temperature
+    #     #   3. LD ON
+    #     #   4. Wait for current == set_current
 
-        # 2. Wait
-        setpoint = self.temperature_setpoint
-        while(abs(setpoint-self.temperature)>temp_error):pass
+    #     # 1. TEC ON
+    #     self.write('OUTP2:STAT ON')
+
+    #     # 2. Wait
+    #     setpoint = self.temperature_setpoint
+    #     while(abs(setpoint-self.temperature)>temp_error):pass
 
 
-        # 3. LD ON
-        self.write('OUTP1:STAT ON')
+    #     # 3. LD ON
+    #     self.write('OUTP1:STAT ON')
 
-        # 4. Wait
-        setpoint = self.LD_current_setpoint
-        while(abs(setpoint-self.LD_current)>current_error):pass
+    #     # 4. Wait
+    #     setpoint = self.LD_current_setpoint
+    #     while(abs(setpoint-self.LD_current)>current_error):pass
 
-    @Action()
-    def turn_off_seq(self, current_error=0.005):
-        #Turn OFF sequence:
-        #   1. LD OFF
-        #   2. Wait for current == 0
-        #   3. TEC OFF
+    # @Action()
+    # def turn_off_seq(self, current_error=0.005):
+    #     #Turn OFF sequence:
+    #     #   1. LD OFF
+    #     #   2. Wait for current == 0
+    #     #   3. TEC OFF
 
-        # 1. LD OFF
-        self.write('OUTP1:STAT OFF')
+    #     # 1. LD OFF
+    #     self.write('OUTP1:STAT OFF')
 
-        # 2. Wait
-        while(abs(self.LD_current)>current_error):pass
+    #     # 2. Wait
+    #     while(abs(self.LD_current)>current_error):pass
 
-        # 1. TEC OFF
-        self.write('OUTP2:STAT OFF')
+    #     # 1. TEC OFF
+    #     self.write('OUTP2:STAT OFF')
 
 
 
