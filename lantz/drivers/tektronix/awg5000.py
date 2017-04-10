@@ -11,6 +11,7 @@
 import numpy as np
 import re
 from enum import Enum
+import ftplib as _ftp
 
 from lantz.messagebased import MessageBasedDriver
 from lantz import Feat, DictFeat, Action
@@ -26,16 +27,28 @@ class AWG5000(MessageBasedDriver):
 
     DEFAULTS = {
         'COMMON': {
-            'write_termination': '\r\n',
-            'read_termination': '\r\n',
+            'write_termination': '\n',
+            'read_termination': '\n',
             'timeout': 10000,
         },
     }
 
-    def __init__(self, resource_name, *args, **kwargs):
+    def __init__(self, resource_name, ftp_ip=None, *args, **kwargs):
+        """If ftp_ip is None, it will attempt to figure out the ftp ip from the resources name
+        """
         super().__init__(resource_name, *args, **kwargs)
-        self.ip = re.findall('[0-9]+.[0-9]+.[0-9]+.[0-9]+', resource_name)
+        if ftp_ip is None:
+            self.ip = re.findall('[0-9]+.[0-9]+.[0-9]+.[0-9]+', resource_name)
+        else:
+            self.ip = ftp_ip
         return
+
+    def initialize(self):
+        super().initialize()
+
+        #Start from the ftp directory
+        self.cd('\\')
+        self.cd('ftp')
 
     @Feat(read_once=True)
     def idn(self):
@@ -101,6 +114,105 @@ class AWG5000(MessageBasedDriver):
     def waveform(self, key, value):
         index, channel = key
         self.write('SEQ:ELEM{}:WAV{} {}'.format(index, channel, value))
+
+
+    # ----------------------------------------------------
+    # Hard Drive navigation method
+    # ----------------------------------------------------
+    VALID_DRIVE = {"MAIN", "FLOP", "NET1", "NET2", "NET3"}
+
+    @Action()
+    def cd(self, dir):
+        self.write('MMEM:CDIR "{}"'.format(dir))
+
+    @Action()
+    def ls(self, verbose=True):
+        #Query the current directory and the content
+        dir = self.query("MMEM:CDIR?").strip('"')
+        content = self.query("MMEM:CAT?").split(',"')
+        used, avail = map(int, content.pop(0).split(","))
+
+        dirs = list()
+        files = list()
+        for item in content:
+            item = item.strip('"')
+            name, isDir, size = item.split(',')
+            if isDir=='DIR': dirs.append(name)
+            else           : files.append((name, size))
+
+        # Build and print an answer (or return it
+        if verbose:
+            spaces_size = 30
+            ans =  "{} ({:.2f}% full):\r\n".format(dir, (used / (used + avail)))
+            for d in dirs: ans += '\t|_ '+d+(' '*(spaces_size-len(d)))+'DIR\n'
+            for f in files: ans += '\t|_ '+f[0]+(' '*(spaces_size-len(f[0])))+f[1]+'\n'
+            print(ans)
+        else:
+            return (dir, used, avail), dirs, files
+
+    @Action()
+    def mkdir(self, dir_name, drive="MAIN"):
+        if not drive in self.VALID_DRIVE: raise Exception("Invalid drive!")
+        self.write(':MMEM:MDIR "{}", "{}"'.format(dir_name, drive))
+
+    @Action()
+    def select_drive(self, drive):
+        if not drive in self.VALID_DRIVE: raise Exception("Invalid drive!")
+        self.write(':MMEM:MSIS "{}"'.format(drive))
+
+    @Action()
+    def get_current_drive(self):
+        print(self.query(':MMEM:MSIS?'))
+
+    #This might not work
+    @Action()
+    def mv(self, source_file_path, dest_file_path, source_drive="MAIN", dest_drive="MAIN"):
+        if not source_drive in self.VALID_DRIVE: raise Exception("Invalid source drive!")
+        if not dest_drive in self.VALID_DRIVE: raise Exception("Invalid destination drive!")
+        self.write(':MMEM:MOVE "{}","{}","{}","{}"'.format(source_file_path, source_drive, dest_file_path, dest_drive))
+
+    # This might not work
+    @Action()
+    def cp(self, source_file_path, dest_file_path, source_drive="MAIN", dest_drive="MAIN"):
+        if not source_drive in self.VALID_DRIVE: raise Exception("Invalid source drive!")
+        if not dest_drive in self.VALID_DRIVE: raise Exception("Invalid destination drive!")
+        self.write(':MMEM:COPY "{}","{}","{}","{}"'.format(source_file_path, source_drive, dest_file_path, dest_drive))
+
+    def upload_file(self, local_filename, remote_filename, print_progress=True):
+        self.ftp = _ftp.FTP(self.ip)
+        self.ftp.login()
+        if print_progress:
+            FTP_Upload(self.ftp,local_filename, remote_filename)
+        else:
+            self.ftp.storbinary('STOR ' + remote_filename, open(local_filename, 'rb'), blocksize=1024)
+        self.ftp.quit()
+
+    @Action()
+    def load_awg_file(self, filename):
+        self.write('AWGCONTROL:SRESTORE "{}"'.format(filename))
+
+
+
+class FTP_Upload():
+    def __init__(self, ftp, local_filename, remote_filename):
+
+        block_size = 1024
+        total_size = _os.path.getsize(local_filename)
+        self.written_size = 0
+        self.last_time = _t.time()
+        self.last_percent = 0
+
+        def callback(block):
+            self.written_size += block_size
+            time = _t.time()
+            percent = (self.written_size / total_size)*100
+            #print(time - self.last_time > 1,percent - self.last_percent  > 0.1)
+            if time - self.last_time > 1 and percent - self.last_percent  > 0.1:
+                self.last_time = time
+                self.last_percent = percent
+                print('{:.2f}%'.format(percent))
+        print('Uploading "{}" to remote destination "{}"'.format(local_filename, remote_filename))
+        ftp.storbinary('STOR ' + remote_filename, open(local_filename, 'rb'), blocksize=block_size, callback=callback)
 
 
 if __name__ == '__main__':

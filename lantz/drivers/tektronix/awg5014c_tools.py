@@ -118,6 +118,8 @@ class AWG_File_Writer(object):
 
     def add_waveform(self, name, analog, marker1, marker2):
         if len(self.wfm)>=32000: raise Exception("Maximum 32000 waveform in .AWG file...")
+        if len(analog)<250:
+            print("WARNING: The AWG will use the software sequencer because this waveform has less than 250 points")
         data = array_to_ieee_block(analog, marker1, marker2, prepend_length=False)
         t = _dt.now()
         tm = [t.year, t.month, t.weekday(), t.day, t.hour, t.minute, t.second, t.microsecond // 1000]
