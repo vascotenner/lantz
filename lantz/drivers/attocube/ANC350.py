@@ -1,5 +1,5 @@
 from lantz.foreign import LibraryDriver
-from lantz import Feat, DictFeat, Action
+from lantz import Feat, DictFeat, Action, Q_
 
 import time
 from ctypes import c_uint, c_void_p, c_double, pointer, POINTER
@@ -16,23 +16,16 @@ class ANC350(LibraryDriver):
     def __init__(self):
         super(ANC350, self).__init__()
 
+        #Discover systems
         ifaces = c_uint(0x01) # USB interface
         devices = c_uint()
-        status = self.lib.discover(ifaces, pointer(devices))
+        self.check_error(self.lib.discover(ifaces, pointer(devices)))
         if not devices.value:
             raise RuntimeError('No controller found. Check if controller is connected or if another application is using the connection')
-        print('discover status:', status)
-        print('found devices:', devices.value)
-        dev_no = c_uint(devices.value - 1)
-        print('trying dev no:', dev_no.value)
-        device = c_void_p()
-        status = self.lib.connect(dev_no, pointer(device))
-        print('connect status:', status)
-        self.device = device
+        self.dev_no = c_uint(devices.value - 1)
+        self.device = None
 
-        time.sleep(0.5)
-
-
+        # Function definitions
         self.lib.getFrequency.argtypes = [c_void_p, c_uint, POINTER(c_double)]
         self.lib.setFrequency.argtypes = [c_void_p, c_uint, c_double]
         self.lib.setDcVoltage.argtypes = [c_void_p, c_uint, c_double]
@@ -40,32 +33,54 @@ class ANC350(LibraryDriver):
         self.lib.measureCapacitance.argtypes = [c_void_p, c_uint, POINTER(c_double)]
         self.lib.startContinousMove.argtypes = [c_void_p, c_uint, c_uint, c_uint]
         self.lib.setTargetPosition.argtypes = [c_void_p, c_uint, c_double]
+        self.lib.setTargetRange.argtypes = [c_void_p, c_uint, c_double]
+        self.lib.disconnect.argtypes = [c_void_p]
+        return
 
+    def initialize(self, devNo=None):
+        if not devNo is None: self.devNo = devNo
+        device = c_void_p()
+        self.check_error(self.lib.connect(self.dev_no, pointer(device)))
+        self.device = device
 
+        #Wait until we get something else then 0 on the position
+        while(self.position[2] == Q_(0, 'um')):time.sleep(0.025)
 
+    def finalize(self):
+        self.check_error(self.lib.disconnect(self.device))
+        self.device = None
+
+    def check_error(self, err):
+        if err != 0:
+            raise Exception("Driver Error {}: {}".format(err, self.RETURN_STATUS[err]))
         return
 
     @DictFeat(units='Hz')
     def frequency(self, axis):
         ret_freq = c_double()
-        err = self.lib.getFrequency(self.device, axis, pointer(ret_freq))
+        self.check_error(self.lib.getFrequency(self.device, axis, pointer(ret_freq)))
         return ret_freq.value
 
     @frequency.setter
     def frequency(self, axis, freq):
-        err = self.lib.setFrequency(self.device, axis, freq)
+        self.check_error(self.lib.setFrequency(self.device, axis, freq))
         return err
 
     @DictFeat(units='um')
     def position(self, axis):
         ret_pos = c_double()
-        self.lib.getPosition(self.device, axis, pointer(ret_pos))
+        self.check_error(self.lib.getPosition(self.device, axis, pointer(ret_pos)))
         return ret_pos.value * 1e6
+
+    @position.setter
+    def position(self, axis, pos):
+        return self.absolute_move(axis, pos*1e-6)
+
 
     @DictFeat(units='F')
     def capacitance(self, axis):
         ret_c = c_double()
-        self.lib.measureCapacitance(self.device, axis, pointer(ret_c))
+        self.check_error(self.lib.measureCapacitance(self.device, axis, pointer(ret_c)))
         return ret_c.value
 
     @DictFeat()
@@ -81,7 +96,7 @@ class ANC350(LibraryDriver):
         ]
         status_flags = [c_uint() for _ in range(7)]
         status_flags_p = [pointer(flag) for flag in status_flags]
-        self.lib.getAxisStatus(self.device, axis, *status_flags_p)
+        self.check_error(self.lib.getAxisStatus(self.device, axis, *status_flags_p))
 
         ret = dict()
         for status_name, status_flag in zip(status_names, status_flags):
@@ -92,49 +107,40 @@ class ANC350(LibraryDriver):
     def jog(self, axis, speed):
         backward = 0 if speed >= 0.0 else 1
         start = 1 if speed != 0.0 else 0
-        self.lib.startContinousMove(self.device, axis, start, backward)
+        self.check_error(self.lib.startContinousMove(self.device, axis, start, backward))
+        return
+
+    MAX_RELATIVE_MOVE = Q_(10, 'um')
+    @Action()
+    def absolute_move(self, axis, target, max_move=MAX_RELATIVE_MOVE):
+        if not max_move is None:
+            if abs(self.position[axis]-Q_(target, 'm')) > max_move:
+                raise Exception("Relative move (target-current) is greater then the max_move")
+        self.check_error(self.lib.setTargetPosition(self.device, axis, target))
+        enable = 0x01
+        relative = 0x00
+        self.check_error(self.lib.startAutoMove(self.device, axis, enable, relative))
         return
 
     @Action()
-    def absolute_move(self, axis, target):
-        self.lib.setTargetPosition(self.device, axis, target)
-        enable = 0x01
-        relative = 0x00
-        self.lib.startAutoMove(self.device, axis, enable, relative)
+    def relative_move(self, axis, delta, max_move=MAX_RELATIVE_MOVE):
+        target = self.position[axis] + delta
+        target = target.to('m').magnitude
+        print("Moving to {}".format(target))
+        self.absolute_move(axis, target, max_move=max_move)
+
+    @Action()
+    def set_target_range(self, axis, target_range):
+        self.check_error(self.lib.setTargetRange(self.device, axis, target_range))
         return
 
     @Action()
     def dc_bias(self, axis, voltage):
-        err = self.lib.setDcVoltage(self.device, axis, voltage)
-        return err
+        self.check_error(self.lib.setDcVoltage(self.device, axis, voltage))
+        return
 
-
-def main():
-    import time
-    import numpy as np
-    anc = ANC350()
-    # for axis in range(3):
-    #     print(anc.frequency[axis])
-    #     time.sleep(0.2)
-    #     print(anc.position[axis])
-    #     print(anc.capacitance[axis])
-    # print(anc.position[0])
-    # anc.jog(0, 1.0)
-    # time.sleep(0.5)
-    # anc.jog(0, 0.0)
-    # print(anc.position[0])
-    # anc.jog(0, -1.0)
-    # time.sleep(0.5)
-    # anc.jog(0, 0.0)
-    print(anc.status[0])
-    for pos in np.linspace(35e-6, 1000e-6, 20):
-        anc.absolute_move(0, pos)
-        print(anc.position[0])
-        print(anc.status[0]['moving'])
-        time.sleep(0.5)
-    anc.absolute_move(0, 35e-6)
-    while anc.status[0]['moving']:
-        print('moving')
-
-if __name__ == '__main__':
-    main()
+    # Untested
+    @Action()
+    def stop(self):
+        for axis in range(3):
+            self.check_error(self.lib.startContinousMove(self.device, axis, 0, 1))
