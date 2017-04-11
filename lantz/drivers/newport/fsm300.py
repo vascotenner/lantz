@@ -201,4 +201,4 @@ class FSM300(Driver):
         else:
             pass
         averaged = np.diff(scanned).mean(axis=1)
-        return averaged
+        return averaged*acq_rate.to('Hz').magnitude
