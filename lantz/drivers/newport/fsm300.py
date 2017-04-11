@@ -156,7 +156,7 @@ class FSM300(Driver):
             }
             acq_task.configure_timing_sample_clock(**clock_config)
             task_config = {
-                data': step_voltages,
+                'data': step_voltages,
                 'auto_start': False,
                 'timeout': 0,
                 'group_by': 'scan',
@@ -194,4 +194,4 @@ class FSM300(Driver):
             pass
         scanned = scanned.reshape((steps, pts_per_pos + 1))
         averaged = np.diff(scanned).mean(axis=1)
-        return averaged
+        return averaged*acq_rate.to('Hz').magnitude
