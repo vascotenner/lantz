@@ -17,6 +17,8 @@ from lantz.foreign import RetStr, RetTuple, RetValue
 from .base import Task, Channel
 from .constants import Constants
 
+from lantz import Q_
+
 _GROUP_BY = {'scan': Constants.Val_GroupByScanNumber,
              'channel': Constants.Val_GroupByChannel}
 
@@ -459,7 +461,7 @@ class CounterInputTask(Task):
     CHANNEL_TYPE = 'CI'
 
 
-    def read_scalar(self, timeout=10.0):
+    def read_scalar(self, timeout=Q_(10.0,'s')):
         """Read a single floating-point sample from a counter task. Use
         this function when the counter sample is scaled to a
         floating-point value, such as for frequency and period
@@ -480,10 +482,10 @@ class CounterInputTask(Task):
         :return: The sample read from the task.
         """
 
-        err, value = self.lib.ReadCounterScalarF64(timeout, RetValue('f64'), None)
+        err, value = self.lib.ReadCounterScalarF64(timeout.to('s').magnitude, RetValue('f64'), None)
         return value
 
-    def read(self, samples_per_channel=None, timeout=10.0):
+    def read(self, samples_per_channel=None, timeout=Q_(10.0,'s')):
         """Read multiple 32-bit integer samples from a counter task.
         Use this function when counter samples are returned unscaled,
         such as for edge counting.
@@ -533,7 +535,7 @@ class CounterInputTask(Task):
         data = np.zeros((samples_per_channel,),dtype=np.int32)
 
 
-        err, count = self.lib.ReadCounterU32(samples_per_channel, float(timeout),
+        err, count = self.lib.ReadCounterU32(samples_per_channel, float(timeout.to('s').magnitude),
                                              data.ctypes.data, data.size, RetValue('i32'), None)
 
 

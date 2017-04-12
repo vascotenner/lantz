@@ -110,7 +110,7 @@ class ANC350(LibraryDriver):
         self.check_error(self.lib.startContinousMove(self.device, axis, start, backward))
         return
 
-    MAX_RELATIVE_MOVE = Q_(10, 'um')
+    MAX_RELATIVE_MOVE = Q_(40, 'um')
     @Action()
     def absolute_move(self, axis, target, max_move=MAX_RELATIVE_MOVE):
         if not max_move is None:

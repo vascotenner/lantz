@@ -120,7 +120,7 @@ class FSM300(Driver):
             task_config = {
                 'data': step_voltages,
                 'auto_start': False,
-                'timeout': 0,
+                'timeout': Q_(0,'s'),
                 'group_by': 'scan',
             }
             self.task.write(**task_config)
@@ -169,7 +169,7 @@ class FSM300(Driver):
             acq_task.arm_start_trigger_type = 'digital_edge'
             acq_task.start()
             self.task.start()
-            scanned = acq_task.read(samples_per_channel=len(step_voltages))
+            scanned = acq_task.read(samples_per_channel=len(step_voltages), timeout=Q_(10.0,'s'))
             acq_task.stop()
             self.task.stop()
             scanned = scanned.reshape((steps, pts_per_pos + 1))
@@ -193,7 +193,7 @@ class FSM300(Driver):
             self.task.configure_trigger_digital_edge_start('ai/StartTrigger')
             self.task.start()
             acq_task.start()
-            scanned = acq_task.read(samples_per_channel=len(step_voltages))
+            scanned = acq_task.read(samples_per_channel=len(step_voltages), timeout=Q_(10.0,'s'))
             acq_task.stop()
             self.task.stop()
             scanned = scanned.reshape((steps, pts_per_pos))
