@@ -35,8 +35,8 @@ class FSM300(Driver):
                  ao_smooth_rate=Q_('10 kHz'), ao_smooth_steps=Q_('1000 1/V'),
                  limits=((Q_(-10, 'V'), Q_(10, 'V')), (Q_(-10, 'V'), Q_(10, 'V'))),
                  cal=(Q_(9.5768, 'um/V'), Q_(7.1759, 'um/V'))):
-        x_limits_mag = tuple(float(val / Q_('1 V')) for val in limits[0])
-        y_limits_mag = tuple(float(val / Q_('1 V')) for val in limits[1])
+        self.x_limits_mag = tuple(float(val / Q_('1 V')) for val in limits[0])
+        self.y_limits_mag = tuple(float(val / Q_('1 V')) for val in limits[1])
 
         self.ao_smooth_rate = ao_smooth_rate
         self.ao_smooth_steps = ao_smooth_steps
@@ -46,12 +46,15 @@ class FSM300(Driver):
 
         super().__init__()
 
+        self.x_ao_ch = x_ao_ch
+        self.y_ao_ch = y_ao_ch
+
         return
 
     def initialize(self):
         self.task = AnalogOutputTask('fsm300')
-        VoltageOutputChannel(x_ao_ch, name='fsm_x', min_max=x_limits_mag, units='volts', task=self.task)
-        VoltageOutputChannel(y_ao_ch, name='fsm_y', min_max=y_limits_mag, units='volts', task=self.task)
+        VoltageOutputChannel(self.x_ao_ch, name='fsm_x', min_max=self.x_limits_mag, units='volts', task=self.task)
+        VoltageOutputChannel(self.y_ao_ch, name='fsm_y', min_max=self.y_limits_mag, units='volts', task=self.task)
         super().initialize()
 
     def finalize(self):
@@ -117,7 +120,7 @@ class FSM300(Driver):
             task_config = {
                 'data': step_voltages,
                 'auto_start': False,
-                'timeout': 0,
+                'timeout': Q_(0,'s'),
                 'group_by': 'scan',
             }
             self.task.write(**task_config)
@@ -127,7 +130,7 @@ class FSM300(Driver):
         self._position = point
 
     @Action()
-    def line_scan(self, init_point, final_point, steps, acq_task, acq_rate=Q_('100 kHz'), pts_per_pos=100):
+    def line_scan(self, init_point, final_point, steps, acq_task, acq_rate=Q_('20 kHz'), pts_per_pos=100):
         init_point = enforce_point_units(init_point)
         final_point = enforce_point_units(final_point)
 
@@ -135,7 +138,7 @@ class FSM300(Driver):
         self.abs_position = init_point
         step_voltages = self.ao_linear_func(init_point, final_point, steps)
         if acq_task.IO_TYPE == 'CI':
-            chs = acq_task.channels.keys()
+            chs = list(acq_task.channels.keys())
             if not chs:
                 raise ValueError('acquisition task must have at least one channel')
             ch = chs[0]
@@ -149,24 +152,27 @@ class FSM300(Driver):
             }
             self.task.configure_timing_sample_clock(**clock_config)
             clock_config = {
-                'source': '{}/ao/SampleClock'.format(dev),
+                'source': '/{}/ao/SampleClock'.format(dev),
                 'rate': acq_rate.to('Hz').magnitude,
                 'sample_mode': 'finite',
                 'samples_per_channel': len(step_voltages),
             }
             acq_task.configure_timing_sample_clock(**clock_config)
             task_config = {
-                data': step_voltages,
+                'data': step_voltages,
                 'auto_start': False,
-                'timeout': 0,
+                'timeout': Q_('0 s'),
                 'group_by': 'scan',
             }
-            acq_task.arm_start_trigger_source = '{}/ao/StartTrigger'.format(dev)
+            self.task.write(**task_config)
+            acq_task.arm_start_trigger_source = 'ao/StartTrigger'.format(dev)
             acq_task.arm_start_trigger_type = 'digital_edge'
             acq_task.start()
-            scanned = acq_task.read(samples_per_channel=len(step_voltages))
+            self.task.start()
+            scanned = acq_task.read(samples_per_channel=len(step_voltages), timeout=Q_(10.0,'s'))
             acq_task.stop()
             self.task.stop()
+            scanned = scanned.reshape((steps, pts_per_pos + 1))
         elif acq_task.IO_TYPE == 'AI':
             step_voltages = np.repeat(step_voltages, pts_per_pos, axis=0)
             clock_config = {
@@ -180,18 +186,19 @@ class FSM300(Driver):
             task_config = {
                 'data': step_voltages,
                 'auto_start': False,
-                'timeout': 0,
+                'timeout': Q_('0 s'),
                 'group_by': 'scan',
             }
             self.task.write(**task_config)
             self.task.configure_trigger_digital_edge_start('ai/StartTrigger')
             self.task.start()
             acq_task.start()
-            scanned = acq_task.read(samples_per_channel=len(step_voltages))
+            scanned = acq_task.read(samples_per_channel=len(step_voltages), timeout=Q_(10.0,'s'))
             acq_task.stop()
             self.task.stop()
+            scanned = scanned.reshape((steps, pts_per_pos))
+
         else:
             pass
-        scanned = scanned.reshape((steps, pts_per_pos + 1))
         averaged = np.diff(scanned).mean(axis=1)
-        return averaged
+        return averaged*acq_rate.to('Hz').magnitude
