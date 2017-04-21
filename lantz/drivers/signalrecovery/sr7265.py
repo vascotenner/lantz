@@ -28,8 +28,8 @@ class SR7265(MessageBasedDriver):
 
     DEFAULTS = {
         'COMMON': {
-            'write_termination': '',
-            'read_termination': ''
+            'write_termination': '\r\n',
+            'read_termination': '\r\n'
         }
     }
 
@@ -223,6 +223,8 @@ class SR7265(MessageBasedDriver):
         """
         self.write('ACGAIN{}'.format(gain_value))
 
+
+
     @Feat(values=SENSITIVITIES)
     def sensitivity(self):
         """
@@ -236,6 +238,26 @@ class SR7265(MessageBasedDriver):
         Sets value of sensitivity as described by SENSITIVITIES.
         """
         self.write('SEN{}'.format(sen_it))
+
+    @Feat()
+    def voltage_mode(self):
+        """
+        Gets the voltage mode
+        """
+        return int(self.query('VMODE'))
+
+    @voltage_mode.setter
+    def voltage_mode(self, n):
+        """
+        Sets value of voltage mode
+        From page 138 of the 7265 manual, they say:
+            n   Input configuration
+            0   Both inputs grounded (test mode)
+            1   A input only
+            2   -B input only
+            3   A-B differential mode
+        """
+        self.write('VMODE{}'.format(n))
 
     @Action()
     def autosensitivity(self):
