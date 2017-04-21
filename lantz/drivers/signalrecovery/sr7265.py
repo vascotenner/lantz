@@ -34,85 +34,85 @@ class SR7265(MessageBasedDriver):
     }
 
     INT_EXT_REF = OrderedDict([
-                   ('int', 0),
-                   ('rear ext', 1),
-                   ('ext', 2)
+                   ('Internal', 0),
+                   ('Rear External', 1),
+                   ('External', 2)
                    ])
 
     TIME_CONSTANTS = OrderedDict([
-                     (0, 10e-6),
-                     (1, 20e-6),
-                     (2, 40e-6),
-                     (3, 80e-6),
-                     (4, 160e-6),
-                     (5, 320e-6),
-                     (6, 640e-6),
-                     (7, 5e-3),
-                     (8, 10e-3),
-                     (9, 20e-3),
-                     (10, 50e-3),
-                     (11, 100e-3),
-                     (12, 0.2),
-                     (13, 0.5),
-                     (14, 1),
-                     (15, 2),
-                     (16, 5),
-                     (17, 10),
-                     (18, 20),
-                     (19, 50),
-                     (20, 100),
-                     (21, 200),
-                     (22, 500),
-                     (23, 1e3),
-                     (24, 2e3),
-                     (25, 5e3),
-                     (26, 10e3),
-                     (27, 20e3),
-                     (28, 50e3),
-                     (29, 100)
+                     ('10 us' , 0  ),
+                     ('20 us' , 1  ),
+                     ('40 us' , 2  ),
+                     ('80 us' , 3  ),
+                     ('160 us', 4  ),
+                     ('320 us', 5  ),
+                     ('640 us', 6  ),
+                     ('5 ms'  , 7  ),
+                     ('10 ms' , 8  ),
+                     ('20 ms' , 9  ),
+                     ('50 ms' , 10 ),
+                     ('100 ms', 11 ),
+                     ('200 ms', 12 ),
+                     ('500 ms', 13 ),
+                     ('1 s'   , 14 ),
+                     ('2 s'   , 15 ),
+                     ('5 s'   , 16 ),
+                     ('10 s'  , 17 ),
+                     ('20 s'  , 18 ),
+                     ('50 s'  , 19 ),
+                     ('100 s' , 20 ),
+                     ('200 s' , 21 ),
+                     ('500 s' , 22 ),
+                     ('1 ks'  , 23 ),
+                     ('2 ks'  , 24 ),
+                     ('5 ks'  , 25 ),
+                     ('10 ks' , 26 ),
+                     ('20 ks' , 27 ),
+                     ('50 ks' , 28 ),
+                     ('100 ks', 29 ),
                      ])
 
     AC_GAINS = OrderedDict([
-               ('0dB', 0),
-               ('10dB', 1),
-               ('20dB', 2),
-               ('30dB', 3),
-               ('40dB', 4),
-               ('50dB', 5),
-               ('60dB', 6),
-               ('70dB', 7),
-               ('80dB', 8),
-               ('90dB', 9),
+               ('0 dB', 0),
+               ('10 dB', 1),
+               ('20 dB', 2),
+               ('30 dB', 3),
+               ('40 dB', 4),
+               ('50 dB', 5),
+               ('60 dB', 6),
+               ('70 dB', 7),
+               ('80 dB', 8),
+               ('90 dB', 9),
                ])
 
     SENSITIVITIES = OrderedDict([
-                    ('2e-9V', 1),
-                    ('5e-9V', 2),
-                    ('1e-8V', 3),
-                    ('2e-8V', 4),
-                    ('5e-8V', 5),
-                    ('1e-7V', 6),
-                    ('2e-7V', 7),
-                    ('5e-7V', 8),
-                    ('1e-6V', 9),
-                    ('2e-6V', 10),
-                    ('5e-6V', 11),
-                    ('1e-5V', 12),
-                    ('2e-5V', 13),
-                    ('5e-5V', 14),
-                    ('1e-4V', 15),
-                    ('2e-4V', 16),
-                    ('5e-4V', 17),
-                    ('1e-3V', 18),
-                    ('2e-3V', 19),
-                    ('5e-3V', 20),
-                    ('1e-2V', 21),
-                    ('2e-2V', 22),
-                    ('5e-2V', 23),
-                    ('1e-1V', 24),
-                    ('2e-1V', 25),
-                    ('5e-1V', 26),
-                    ('1V', 27),
+                    ('2 nV',   1  ),
+                    ('5 nV',   2  ),
+                    ('10 nV',  3  ),
+                    ('20 nV',  4  ),
+                    ('50 nV',  5  ),
+                    ('100 nV', 6  ),
+                    ('200 nV', 7  ),
+                    ('500 nV', 8  ),
+                    ('1 uV',   9  ),
+                    ('2 uV',   10 ),
+                    ('5 uV',   11 ),
+                    ('10 uV',  12 ),
+                    ('20 uV',  13 ),
+                    ('50 uV',  14 ),
+                    ('100 uV', 15 ),
+                    ('200 uV', 16 ),
+                    ('500 uV', 17 ),
+                    ('1 mV',   18 ),
+                    ('2 mV',   19 ),
+                    ('5 mV',   20 ),
+                    ('10 mV',  21 ),
+                    ('20 mV',  22 ),
+                    ('50 mV',  23 ),
+                    ('100 mV', 24 ),
+                    ('200 mV', 25 ),
+                    ('500 mV', 26 ),
+                    ('1 V',    27 ),
                     ])
 
     def remove_null(self, value):
@@ -147,14 +147,14 @@ class SR7265(MessageBasedDriver):
         """
         return [float(value) for value in self.remove_null(self.query('XY.')).split(',')]
 
-    @Feat()
+    @Feat(units='V')
     def magnitude(self):
         """
         Read signal magnitude from lockin.
         """
         return float(self.remove_null(self.query('MAG.')))
 
-    @Feat()
+    @Feat(units='degree')
     def phase(self):
         """
         Read signal phase from lockin.
@@ -176,34 +176,17 @@ class SR7265(MessageBasedDriver):
         """
         return self.write('AQN')
 
-    @Feat(limits=(0, 29, 1))
-    def time_constant_integer(self):
-        """
-        Read current lockin time constant mode setting
-        """
-        return int(self.query('TC'))
-
-    @time_constant_integer.setter
-    def time_constant_integer(self, integer):
-        """
-        Set lockin time constant.
-        """
-        return self.write('TC{}'.format(integer))
-
     @Feat(values=TIME_CONSTANTS)
     def time_constant(self):
         """
         Returns current time constant setting (in seconds).
         """
-        return float(self.query('TC.'))
+        return float(self.query('TC'))
 
     @time_constant.setter
     def time_constant(self, time_const):
-        """
-        Not implemented, not a built in functionality.
-        """
-        print('Error: invalid operation, cannot directly set TC')
-        return 0
+        self.write('TC{}'.format(time_const))
+        return
 
     @Feat()
     def frequency(self):
@@ -315,11 +298,11 @@ class SR7265(MessageBasedDriver):
     def get_bit(self, byte, bit):
         return True if int('{0:b}'.format(byte).zfill(8)[-(bit + 1)]) else False
 
-    @Feat()
+    @Feat(values={True: True, False: False})
     def reference_unlock(self):
         return self.get_bit(self.status_byte(), 3)
 
-    @Feat()
+    @Feat(values={True: True, False: False})
     def overload(self):
         return self.get_bit(self.status_byte(), 4)
 
