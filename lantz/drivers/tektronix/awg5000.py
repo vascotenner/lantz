@@ -10,17 +10,12 @@
 
 import numpy as np
 import re
-from enum import Enum
 import ftplib as _ftp
+import os as _os
+import time as _t
 
 from lantz.messagebased import MessageBasedDriver
 from lantz import Feat, DictFeat, Action
-
-
-class AWGState(Enum):
-    stopped = 0
-    trigger_wait = 1
-    running = 2
 
 
 class AWG5000(MessageBasedDriver):
@@ -38,7 +33,7 @@ class AWG5000(MessageBasedDriver):
         """
         super().__init__(resource_name, *args, **kwargs)
         if ftp_ip is None:
-            self.ip = re.findall('[0-9]+.[0-9]+.[0-9]+.[0-9]+', resource_name)
+            self.ip = re.findall('[0-9]+.[0-9]+.[0-9]+.[0-9]+', resource_name)[0]
         else:
             self.ip = ftp_ip
         return
@@ -54,15 +49,15 @@ class AWG5000(MessageBasedDriver):
     def idn(self):
         return self.query('*IDN?')
 
-    @Feat()
+    @Feat(values={'stop':0, 'wait_for_trigger':1, 'run':2})
     def toggle_run(self):
-        return AWGState(int(self.query('AWGC:RST?')))
+        return int(self.query('AWGC:RST?'))
 
     @toggle_run.setter
     def toggle_run(self, state):
-        if state or state == AWGState.running:
+        if state == 2:
             cmd = 'RUN'
-        elif not state or state == AWGState.stopped:
+        elif state == 0:
             cmd = 'STOP'
         else:
             raise ValueError('invalid run state: {}'.format(state))
