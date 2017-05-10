@@ -12,6 +12,8 @@ import numpy as np
 import re
 from enum import Enum
 import ftplib as _ftp
+import os as _os
+import time as _t
 
 from lantz.messagebased import MessageBasedDriver
 from lantz import Feat, DictFeat, Action
