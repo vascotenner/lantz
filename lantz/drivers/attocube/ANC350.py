@@ -103,6 +103,13 @@ class ANC350(LibraryDriver):
             ret[status_name] = True if status_flag.value else False
         return ret
 
+    # Untested
+    @Action()
+    def stop(self):
+        for axis in range(3):
+            self.lib.startContinousMove(self.device, axis, 0, 1)
+
+
     @Action()
     def jog(self, axis, speed):
         backward = 0 if speed >= 0.0 else 1
@@ -122,6 +129,19 @@ class ANC350(LibraryDriver):
         self.check_error(self.lib.startAutoMove(self.device, axis, enable, relative))
         return
 
+    MAX_RELATIVE_MOVE = Q_(10e-6, 'um')
+    @Action()
+    def relative_move(self, axis, delta):
+        delta = Q_(delta, 'um')
+        if abs(delta) > MAX_RELATIVE_MOVE:
+            raise Exception("Relative move <delta> is greater then the MAX_RELATIVE_MOVE")
+        else:
+            target = self.position + delta
+            target = target.to('m').magnitude
+            print(target)
+            # self.absolute_move(axis, target)
+
+
     @Action()
     def relative_move(self, axis, delta, max_move=MAX_RELATIVE_MOVE):
         target = self.position[axis] + delta
@@ -138,6 +158,29 @@ class ANC350(LibraryDriver):
     def dc_bias(self, axis, voltage):
         self.check_error(self.lib.setDcVoltage(self.device, axis, voltage))
         return
+
+    # ----------------------------------------------
+    # Closed-loop Actions
+    # These action are much slower but they ensure the move completed
+    @Action(units=('um', 'um', None, 'seconds', None, None))
+    def cl_move(self, z, delta_z=Q_(0.1,'um'), iter_n=10, delay=Q_(0.01, 's'), debug=False, max_iter=1000):
+        i = 0
+        while(not self.at_pos(Q_(z, 'um'), delta_z=Q_(delta_z, 'um'), iter_n=iter_n, delay=Q_(delay,'s'))):
+            self.position[2] = Q_(z, 'um')
+            i += 1
+            if i>=max_iter:
+                raise Exception("Reached max_iter")
+        if debug: print("It took {} iterations to move to position".format(i))
+        return
+
+    @Action(units=('um', 'um', None, 'seconds'))
+    def at_pos(self, z, delta_z=Q_(0.1,'um'), iter_n=10, delay=Q_(0.01, 's')):
+        for i in range(iter_n):
+            time.sleep(delay)
+            if abs(self.position[2].to('um').magnitude-z)>delta_z:
+                return False
+        return True
+    # ----------------------------------------------
 
     # Untested
     @Action()
