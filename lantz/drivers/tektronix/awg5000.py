@@ -54,9 +54,11 @@ class AWG5000(MessageBasedDriver):
     def idn(self):
         return self.query('*IDN?')
 
-    @Feat()
+    @Feat(values={item.name: item.value for item in AWGState})
+    # @Feat()
     def toggle_run(self):
-        return AWGState(int(self.query('AWGC:RST?')))
+        # return AWGState(int(self.query('AWGC:RST?')))
+        return int(self.query('AWGC:RST?'))
 
     @toggle_run.setter
     def toggle_run(self, state):
@@ -68,7 +70,7 @@ class AWG5000(MessageBasedDriver):
             raise ValueError('invalid run state: {}'.format(state))
         self.write('AWGC:{}:IMM'.format(cmd))
 
-    @DictFeat(values={True: '1', False: '0'})
+    @DictFeat(keys=range(1, 5), values={True: '1', False: '0'})
     def toggle_output(self, channel):
         return self.query('OUTP{}:STAT?'.format(channel))
 
