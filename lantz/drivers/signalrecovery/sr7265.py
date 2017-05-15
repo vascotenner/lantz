@@ -306,6 +306,13 @@ class SR7265(MessageBasedDriver):
     def overload(self):
         return self.get_bit(self.status_byte(), 4)
 
+    @Action()
+    def autophase(self):
+        """
+        Automatically detect offset
+        """
+        return self.write('AXO')
+
 
 
 if __name__ == '__main__':
