@@ -59,7 +59,6 @@ class DLC(MessageBasedDriver):
         def output(self, val):
             return self.set('laser1:dl:cc:enabled', val)
 
-
         @Feat(values={True: '#t', False: '#f'})
         def piezo_enabled(self):
             return self.get('laser1:dl:pc:enabled')
@@ -68,31 +67,34 @@ class DLC(MessageBasedDriver):
         def piezo_enabled(self, val):
             return self.set('laser1:dl:pc:enabled', val)
 
-
         @Feat(units='V')
         def piezo_vmax(self):
             return self.get('laser1:dl:pc:voltage-max')
-
-        @piezo_vmax.setter
-        def piezo_vmax(self, val):
-            return self.set('laser1:dl:pc:voltage-max', val)
-
 
         @Feat(units='V')
         def piezo_vmin(self):
             return self.get('laser1:dl:pc:voltage-min')
 
-
         @Feat(units='V')
-        def piezo_vset(self):
+        def piezo_voltage(self):
             return self.get('laser1:dl:pc:voltage-set')
 
-        @piezo_vset.setter
-        def piezo_vset(self, val):
+        @piezo_voltage.setter
+        def piezo_voltage(self, val):
             return self.set('laser1:dl:pc:voltage-set', val)
 
+        @Feat(units='mA')
+        def current(self):
+            return self.get('laser1:dl:cc:current-set')
 
+        @current.setter
+        def current(self, val):
+            return self.set('laser1:dl:cc:current-set', val)
 
+        @Feat(units='mA')
+        def current_offset(self):
+            return self.get('laser1:dl:cc:current-offset')
 
-
-
+        @current_offset.setter
+        def current_offset(self, val):
+            return self.set('laser1:dl:cc:current-offset', val)
