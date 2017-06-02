@@ -42,7 +42,7 @@ class Cryostation(Driver):
         """
         self.socket.close()
 
-    @Feat()
+    @Feat(values={True, False})
     def alarm_state(self):
         """
         Returns true or false, indicating the presence (T) or absence (F) of
@@ -163,7 +163,7 @@ class Cryostation(Driver):
         """
         return self.send_and_recv('SSB')
 
-    @Feat()
+    @Action()
     def stop(self):
         """
         Returns the status of the last command.
