@@ -51,6 +51,10 @@ class DLC(MessageBasedDriver):
             return self.get("system-type")
 
 
+        ##------------------------
+        ##    Current Control
+        ##------------------------
+
         @Feat(values={True: '#t', False: '#f'})
         def output(self):
             return self.get('laser1:dl:cc:enabled')
@@ -58,6 +62,44 @@ class DLC(MessageBasedDriver):
         @output.setter
         def output(self, val):
             return self.set('laser1:dl:cc:enabled', val)
+
+
+        @Feat(units='mA')
+        def current(self):
+            return self.get('laser1:dl:cc:current-set')
+
+        @current.setter
+        def current(self, val):
+            return self.set('laser1:dl:cc:current-set', val)
+
+        @Feat(units='mA')
+        def current_offset(self):
+            return self.get('laser1:dl:cc:current-offset')
+
+        @current_offset.setter
+        def current_offset(self, val):
+            return self.set('laser1:dl:cc:current-offset', val)
+
+        @Feat(values={True: '#t', False: '#f'})
+        def feedforward_enabled(self):
+            return self.get('laser1:dl:cc:feedforward-enabled')
+
+        @feedforward_enabled.setter
+        def feedforward_enabled(self, val):
+            return self.set('laser1:dl:cc:feedforward-enabled', val)
+
+        @Feat(units='mA/V')
+        def Cff(self):
+            return self.get('laser1:dl:cc:feedforward-factor')
+
+        @Cff.setter
+        def Cff(self, val):
+            return self.set('laser1:dl:cc:feedforward-factor', val)
+
+
+        ##------------------------
+        ##    Piezo Control
+        ##------------------------
 
         @Feat(values={True: '#t', False: '#f'})
         def piezo_enabled(self):
@@ -82,19 +124,3 @@ class DLC(MessageBasedDriver):
         @piezo_voltage.setter
         def piezo_voltage(self, val):
             return self.set('laser1:dl:pc:voltage-set', val)
-
-        @Feat(units='mA')
-        def current(self):
-            return self.get('laser1:dl:cc:current-set')
-
-        @current.setter
-        def current(self, val):
-            return self.set('laser1:dl:cc:current-set', val)
-
-        @Feat(units='mA')
-        def current_offset(self):
-            return self.get('laser1:dl:cc:current-offset')
-
-        @current_offset.setter
-        def current_offset(self, val):
-            return self.set('laser1:dl:cc:current-offset', val)
