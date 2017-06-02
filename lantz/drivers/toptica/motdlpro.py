@@ -4,6 +4,7 @@ import serial
 import numpy as np
 import struct
 import time
+import enum
 
 class MotDLpro(Driver):
 
@@ -25,6 +26,42 @@ class MotDLpro(Driver):
     }
 
     _STAT_OK = 100
+
+    class CMDS(enum.Enum):
+        ROR = 1
+        ROL = 2
+        MST = 3
+        MVP = 4
+        SAP = 5
+        GAP = 6
+        STAP = 7
+        RSAP = 8
+        SGP = 9
+        GGP = 10
+        STGP = 11
+        RSGP = 12
+        RFS = 13
+        SIO = 14
+        GIO = 15
+        CALC = 19
+        COMP = 20
+        JC = 21
+        JA = 22
+        CSUB = 23
+        RSUB = 24
+        EI = 25
+        DI = 26
+        WAIT = 27
+        STOP = 28
+        SCO = 30
+        GCO = 31
+        CCO = 32
+        CALCX = 33
+        AAP = 34
+        AGP = 35
+        VECT = 37
+        RETI = 38
+        ACO = 39
 
     _COMMAND_NUMBERS = {
         1 : "ROR",    2 : "ROL",    3 : "MST",
@@ -191,9 +228,6 @@ class MotDLpro(Driver):
         self.target = target
         return
 
-    def write(self, command):
-        n, self._NUMBER_COMMANDS[command]
-
     def initialize(self):
         self._serial = serial.Serial(
             port=self.address,
@@ -208,6 +242,11 @@ class MotDLpro(Driver):
         self.get_calibration_data()
         return
 
+    def set_sap_for_all_motors(self, sap_type, sap_value):
+        for mot in range(3):
+            self.send_instruction(5, sap_type, mot, sap_value)
+        return
+
     def init_motor_parameters(self):
         self.set_sap_for_all_motors(4, 1000)    # set speed to 1000
         self.set_sap_for_all_motors(5, 100)     # set max accel to 100
@@ -216,7 +255,7 @@ class MotDLpro(Driver):
         self.set_sap_for_all_motors(12, 1)      # disable right limit switch
         self.set_sap_for_all_motors(13, 0)      # enable left limit switch
         self.set_sap_for_all_motors(140, 4)     # set microstep resolution to 16 microsteps (parameter value = 4)
-        #self.set_sap_for_all_motors(143, 2)     # set rest current to approximately 12%
+        # self.set_sap_for_all_motors(143, 2)     # set rest current to approximately 12%
         self.set_sap_for_all_motors(153, 7)     # set ramp to 7
         self.set_sap_for_all_motors(154, 3)     # set pulse to 3
         self.set_sap_for_all_motors(194, 1000)  # set reference speed to 1000
@@ -224,7 +263,7 @@ class MotDLpro(Driver):
         self.set_sap_for_all_motors(204, 30)    # set FreeWheelTime to 10
 
         for idx in range(6):
-            self.send_instruction(14, idx, 0, 0)
+            self.send_instruction(14, typ=idx, 0, 0)
         return
 
     def get_calibration_data(self):
@@ -232,6 +271,17 @@ class MotDLpro(Driver):
         self.wavelength_limits = (1064.86, 1144.51)
         self.p_coeffs = (-1.15278e6, 64.5135, 0.962788)
         self.backlash_coeff = 5035
+        return
+
+    def get_calibration_data(self):
+        params = self.get_global_parameters()
+        min_wl, max_wl = params[0:2]
+        p2, p1, p0 = params[2:5]
+        backlash = params[5]
+
+        self.wavelength_limits = min_wl, max_wl
+        self.p_coeffs = p2, p1, p0
+        self.backlash_coeff = int(backlash)
         return
 
     def checksum(self, buffer):
@@ -287,11 +337,6 @@ class MotDLpro(Driver):
                 raise TMCLError
             return rval
 
-    def set_sap_for_all_motors(self, sap_type, sap_value):
-        for mot in range(3):
-            self.send_instruction(5, sap_type, mot, sap_value)
-        return
-
     def wavelength_to_step(self, wl):
         if not self.wavelength_limits[0] <= wl <= self.wavelength_limits[1]:
             raise ValueError('wavelength {} out of operation range ({}, {})'.format(wl, *self.wavelength_limits))
@@ -306,14 +351,13 @@ class MotDLpro(Driver):
             raise ValueError('wavelength {} out of operation range ({}, {})'.format(wl, *self.wavelength_limits))
         return wl
 
-    @Feat()
+    @Feat(limits=(0, 800000))
     def position(self):
         return self.send_instruction(6, typ=1, mot=0, val=0)
 
     @position.setter
     def position(self, step):
         step = int(step)
-        step = np.clip(step, 0, 800000)
         ret = self.send_instruction(4, typ=0, mot=0, val=step)
 
         now = time.time()
@@ -339,6 +383,15 @@ class MotDLpro(Driver):
             # to beyond by the "backlash" calibration parameter
             target_position -= self.backlash_coeff
         self.position = target_position
+
+    @Action()
+    def precision_move(self, target_position, offset=10000, from_high=False):
+        current_position = self.position
+        offset = -offset if from_high else offset
+        offset_position = np.clip(current_position + offset, 0, 172000)
+        self.position = offset_position
+        self.position = target_position
+        return
 
     @Action()
     def precision_move(self, step, direction=1):
@@ -370,13 +423,54 @@ class MotDLpro(Driver):
         return
 
     @Action()
+    def calibrate(self, steps=1000):
+        lower, upper = self.wavelength_limits
+        _positions = np.linspace(lower, upper, steps)
+        frequencies = list()
+        wavelengths = list()
+
+        for from_high in [False, True]:
+            if from_high:
+                positions = _positions[::-1]
+            for position in positions:
+                self.precision_move(position, from_high=from_high)
+                frequencies.append(wavemeter.frequency)
+                wavelengths.append(wavemeter.wavelength)
+
+        frequencies = np.array(frequencies)
+        wavelengths = np.array(wavelengths)
+
+        n = len(positions)
+        # we will create the calibration fit from the lower-to-upper motor direction
+        p = np.polyfit(wavelength[:n], _positions, deg=2)
+
+        def motor_pos(wl):
+            return p[0] * np.square(wl) + p[1] * wl + p[2]
+
+        fit_positions = motor_pos(wavelengths[n:])
+        backlash = np.mean(fit_positions - _positions[::-1])
+
+        wl_max = np.max(wavelengths[:n])
+        wl_min = np.min(wavelengths[n:])
+
+        return wl_min, wl_max, p[2], p[1], p[0], backlash
+
     def restore_global_parameters(self):
+        parameters = list()
         for idx in range(34):
             offset = 20 + idx
             self.send_instruction(12, typ=offset, mot=0, val=0)
             ret = self.send_instruction(10, typ=offset, mot=0, val=0)
-        return
+            parameters.append(ret)
+        return parameters
 
+    def get_global_parameters(self):
+        parameters = list()
+        for idx in range(34):
+            offset = 20 + idx
+            ret = self.send_instruction(10, typ=offset, mot=0, val=0)
+            parameters.append(ret)
+        return parameters
 
 
 class TMCLError(Exception):
