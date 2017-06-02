@@ -63,6 +63,13 @@ class DLC(MessageBasedDriver):
         def output(self, val):
             return self.set('laser1:dl:cc:enabled', val)
 
+        @Feat(values={True: '#t', False: '#f'})
+        def feedforward_enabled(self):
+            return self.get('laser1:dl:cc:feedforward-enabled')
+
+        @feedforward_enabled.setter
+        def feedforward_enabled(self, val):
+            return self.set('laser1:dl:cc:feedforward-enabled', val)
 
         @Feat(units='mA')
         def current(self):
@@ -80,20 +87,12 @@ class DLC(MessageBasedDriver):
         def current_offset(self, val):
             return self.set('laser1:dl:cc:current-offset', val)
 
-        @Feat(values={True: '#t', False: '#f'})
-        def feedforward_enabled(self):
-            return self.get('laser1:dl:cc:feedforward-enabled')
-
-        @feedforward_enabled.setter
-        def feedforward_enabled(self, val):
-            return self.set('laser1:dl:cc:feedforward-enabled', val)
-
         @Feat(units='mA/V')
-        def Cff(self):
+        def feedforward_factor(self):
             return self.get('laser1:dl:cc:feedforward-factor')
 
-        @Cff.setter
-        def Cff(self, val):
+        @feedforward_factor.setter
+        def feedforward_factor(self, val):
             return self.set('laser1:dl:cc:feedforward-factor', val)
 
 
