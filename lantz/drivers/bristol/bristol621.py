@@ -1,6 +1,6 @@
 from lantz.foreign import LibraryDriver
-from lantz import Feat
-from ctypes import c_long, c_int, c_uint, c_double, c_float
+from lantz import Feat, Action
+from ctypes import c_long, c_int, c_uint, c_double, c_float, byref, POINTER, pointer
 
 class Bristol621(LibraryDriver):
 
@@ -32,6 +32,12 @@ class Bristol621(LibraryDriver):
 
     def finalize(self):
         self.lib.CloseDevice()
+        return
+
+    @Action()
+    def acquisition_frequency(self, f):
+        self.lib.SetAcqFreq(self.handle, f)
+        return
 
     @Feat(units='nm')
     def wavelength(self):
@@ -50,3 +56,10 @@ class Bristol621(LibraryDriver):
         self.lib.SetPowerUnits(self.handle, 0)
         value = self.lib.GetPowerReading(self.handle)
         return value
+
+if __name__ == '__main__':
+    b = Bristol621(5)
+    b.initialize()
+    b.acquisition_frequency(5)
+    while 1:
+        print(b.frequency)
