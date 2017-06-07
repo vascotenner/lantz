@@ -266,23 +266,29 @@ class MotDLpro(Driver):
             self.send_instruction(14, typ=idx, mot=0, val=0)
         return
 
-    def get_calibration_data(self):
-        # hardcode for now - need to change when getting new laser
-        self.wavelength_limits = (1064.86, 1144.51)
-        self.p_coeffs = (-1.15278e6, 64.5135, 0.962788)
-        self.backlash_coeff = 5035
-        return
-
     # def get_calibration_data(self):
-    #     params = self.get_global_parameters()
-    #     min_wl, max_wl = params[0:2]
-    #     p2, p1, p0 = params[2:5]
-    #     backlash = params[5]
-    #
-    #     self.wavelength_limits = min_wl, max_wl
-    #     self.p_coeffs = p2, p1, p0
-    #     self.backlash_coeff = int(backlash)
+    #     # hardcode for now - need to change when getting new laser
+    #     self.wavelength_limits = (1064.86, 1144.51)
+    #     self.p_coeffs = (-1.15278e6, 64.5135, 0.962788)
+    #     self.backlash_coeff = 5035
     #     return
+
+    def toptica_integer_to_double(self, ints):
+        # this is how DC got the hardcoded values in the commented get_calibration_data
+        return struct.unpack('d', struct.pack('ii', *reversed(ints)))[0]
+
+    def get_calibration_data(self):
+        params = self.get_global_parameters()
+        min_wl = toptica_integer_to_double(params[22:24])
+        max_wl = toptica_integer_to_double(params[24:26])
+        p2 = toptica_integer_to_double(params[26:28])
+        p1 = toptica_integer_to_double(params[28:30])
+        p0 = toptica_integer_to_double(params[30:32])
+        backlash = params[32]
+        self.wavelength_limits = (min_wl, max_wl)
+        self.p_coeffs = p2, p1, p0
+        self.backlash_coeff = backlash
+        return
 
     def checksum(self, buffer):
         chk = np.sum(buffer, dtype=np.uint8)
