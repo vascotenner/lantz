@@ -98,6 +98,10 @@ class DLC(MessageBasedDriver):
         def current_offset(self, val):
             return self.set_param('laser1:dl:cc:current-offset', val)
 
+        @Feat(units='mA')
+        def current_actual(self):
+            return self.get_param('laser1:dl:cc:current-act')
+
         @Feat(units='mA/V')
         def feedforward_factor(self):
             return self.get_param('laser1:dl:cc:feedforward-factor')
