@@ -263,7 +263,7 @@ class MotDLpro(Driver):
         self.set_sap_for_all_motors(204, 30)    # set FreeWheelTime to 10
 
         for idx in range(6):
-            self.send_instruction(14, typ=idx, 0, 0)
+            self.send_instruction(14, typ=idx, mot=0, val=0)
         return
 
     def get_calibration_data(self):
@@ -273,16 +273,16 @@ class MotDLpro(Driver):
         self.backlash_coeff = 5035
         return
 
-    def get_calibration_data(self):
-        params = self.get_global_parameters()
-        min_wl, max_wl = params[0:2]
-        p2, p1, p0 = params[2:5]
-        backlash = params[5]
-
-        self.wavelength_limits = min_wl, max_wl
-        self.p_coeffs = p2, p1, p0
-        self.backlash_coeff = int(backlash)
-        return
+    # def get_calibration_data(self):
+    #     params = self.get_global_parameters()
+    #     min_wl, max_wl = params[0:2]
+    #     p2, p1, p0 = params[2:5]
+    #     backlash = params[5]
+    #
+    #     self.wavelength_limits = min_wl, max_wl
+    #     self.p_coeffs = p2, p1, p0
+    #     self.backlash_coeff = int(backlash)
+    #     return
 
     def checksum(self, buffer):
         chk = np.sum(buffer, dtype=np.uint8)
@@ -393,20 +393,20 @@ class MotDLpro(Driver):
         self.position = target_position
         return
 
-    @Action()
-    def precision_move(self, step, direction=1):
-        if direction == 1:
-            if step > 10000:
-                self.position = step - 10000
-            else:
-                self.position = 0
-        else:
-            if step < 172000:
-                self.position = step + 10000
-            else:
-                self.position = 172000 + 10000
-        self.position = step
-        return
+    # @Action()
+    # def precision_move(self, step, direction=1):
+    #     if direction == 1:
+    #         if step > 10000:
+    #             self.position = step - 10000
+    #         else:
+    #             self.position = 0
+    #     else:
+    #         if step < 172000:
+    #             self.position = step + 10000
+    #         else:
+    #             self.position = 172000 + 10000
+    #     self.position = step
+    #     return
 
     @Action()
     def reference_search(self):
