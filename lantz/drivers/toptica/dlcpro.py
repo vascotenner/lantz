@@ -107,27 +107,27 @@ class DLC(MessageBasedDriver):
             return self.set_param('laser1:dl:cc:feedforward-factor', val)
 
         @Feat()
-        def external_input_signal(self):
+        def current_external_input_signal(self):
             return int(self.get_param('laser1:dl:cc:external-input:signal'))
 
-        @external_input_signal.setter
-        def external_input_signal(self, val):
+        @current_external_input_signal.setter
+        def current_external_input_signal(self, val):
             return self.set_param('laser1:dl:cc:external-input:signal', int(val))
 
         @Feat()
-        def external_input_factor(self):
+        def current_external_input_factor(self):
             return float(self.get_param('laser1:dl:cc:external-input:factor'))
 
-        @external_input_factor.setter
-        def external_input_factor(self, val):
+        @current_external_input_factor.setter
+        def current_external_input_factor(self, val):
             return self.set_param('laser1:dl:cc:external-input:factor', float(val))
 
         @Feat(values={True: '#t', False: '#f'})
-        def external_input_enabled(self):
+        def current_external_input_enabled(self):
             return self.get_param('laser1:dl:cc:external-input:enabled')
 
-        @external_input_enabled.setter
-        def external_input_enabled(self, val):
+        @current_external_input_enabled.setter
+        def current_external_input_enabled(self, val):
             return self.set_param('laser1:dl:cc:external-input:enabled', val)
 
 
@@ -158,6 +158,30 @@ class DLC(MessageBasedDriver):
         @piezo_voltage.setter
         def piezo_voltage(self, val):
             return self.set_param('laser1:dl:pc:voltage-set', val)
+
+        @Feat()
+        def piezo_external_input_signal(self):
+            return int(self.get_param('laser1:dl:pc:external-input:signal'))
+
+        @piezo_external_input_signal.setter
+        def piezo_external_input_signal(self, val):
+            return self.set_param('laser1:dl:pc:external-input:signal', int(val))
+
+        @Feat()
+        def piezo_external_input_factor(self):
+            return float(self.get_param('laser1:dl:pc:external-input:factor'))
+
+        @piezo_external_input_factor.setter
+        def piezo_external_input_factor(self, val):
+            return self.set_param('laser1:dl:pc:external-input:factor', float(val))
+
+        @Feat(values={True: '#t', False: '#f'})
+        def piezo_external_input_enabled(self):
+            return self.get_param('laser1:dl:pc:external-input:enabled')
+
+        @piezo_external_input_enabled.setter
+        def piezo_external_input_enabled(self, val):
+            return self.set_param('laser1:dl:pc:external-input:enabled', val)
 
         ##------------------------
         ##    Scan Control
