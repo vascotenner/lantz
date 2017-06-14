@@ -138,6 +138,9 @@ class DLC(MessageBasedDriver):
         ##------------------------
         ##    Piezo Control
         ##------------------------
+        @Feat(units='V')
+        def piezo_voltage_actual(self):
+            return self.get_param('laser1:dl:pc:voltage-act')
 
         @Feat(values={True: '#t', False: '#f'})
         def piezo_enabled(self):
