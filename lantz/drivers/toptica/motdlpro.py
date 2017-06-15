@@ -279,15 +279,17 @@ class MotDLpro(Driver):
 
     def get_calibration_data(self):
         params = self.get_global_parameters()
-        min_wl = toptica_integer_to_double(params[22:24])
-        max_wl = toptica_integer_to_double(params[24:26])
-        p2 = toptica_integer_to_double(params[26:28])
-        p1 = toptica_integer_to_double(params[28:30])
-        p0 = toptica_integer_to_double(params[30:32])
+        min_wl = self.toptica_integer_to_double(params[22:24])
+        max_wl = self.toptica_integer_to_double(params[24:26])
+        p2 = self.toptica_integer_to_double(params[26:28])
+        p1 = self.toptica_integer_to_double(params[28:30])
+        p0 = self.toptica_integer_to_double(params[30:32])
         backlash = params[32]
         self.wavelength_limits = (min_wl, max_wl)
         self.p_coeffs = p2, p1, p0
         self.backlash_coeff = backlash
+        self.step_margin = 1000
+        self.step_limits = self.wavelength_to_step(min_wl), self.wavelength_to_step(max_wl)
         return
 
     def checksum(self, buffer):
@@ -367,11 +369,11 @@ class MotDLpro(Driver):
         ret = self.send_instruction(4, typ=0, mot=0, val=step)
 
         now = time.time()
-        while time.time() < (now + 120.0):
+        while time.time() < (now + 20.0):
             if step == self.position:
                 break
             else:
-                time.sleep(2.0)
+                time.sleep(0.5)
         else:
             print('timeout')
         return
@@ -394,7 +396,13 @@ class MotDLpro(Driver):
     def precision_move(self, target_position, offset=10000, from_high=False):
         current_position = self.position
         offset = -offset if from_high else offset
-        offset_position = np.clip(current_position + offset, 0, 172000)
+        lower, upper = self.step_limits
+        args = [
+            current_position + offset,
+            lower - self.step_margin,
+            upper + self.step_margin,
+        ]
+        offset_position = np.clip(*args)
         self.position = offset_position
         self.position = target_position
         return
