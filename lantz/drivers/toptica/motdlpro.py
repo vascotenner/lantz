@@ -373,9 +373,9 @@ class MotDLpro(Driver):
             if step == self.position:
                 break
             else:
-                time.sleep(0.5)
+                time.sleep(0.1)
         else:
-            print('timeout')
+            print('timeout, needed to get to {}, stopped at {}'.format(step, self.position))
         return
 
     @Feat()
