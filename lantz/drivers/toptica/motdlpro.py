@@ -255,12 +255,17 @@ class MotDLpro(Driver):
         self.set_sap_for_all_motors(12, 1)      # disable right limit switch
         self.set_sap_for_all_motors(13, 0)      # enable left limit switch
         self.set_sap_for_all_motors(140, 4)     # set microstep resolution to 16 microsteps (parameter value = 4)
-        # self.set_sap_for_all_motors(143, 2)     # set rest current to approximately 12%
+
+        # vvv this was commented
+        self.set_sap_for_all_motors(143, 1)     # set rest current to approximately 12%
+
         self.set_sap_for_all_motors(153, 7)     # set ramp to 7
         self.set_sap_for_all_motors(154, 3)     # set pulse to 3
         self.set_sap_for_all_motors(194, 1000)  # set reference speed to 1000
         self.set_sap_for_all_motors(203, 100)   # set the mixed decay threshold to 100
-        self.set_sap_for_all_motors(204, 30)    # set FreeWheelTime to 10
+
+        # vvv this had a value of 30
+        self.set_sap_for_all_motors(204, 10)    # set FreeWheelTime to 10
 
         for idx in range(6):
             self.send_instruction(14, typ=idx, mot=0, val=0)
@@ -359,7 +364,7 @@ class MotDLpro(Driver):
             raise ValueError('wavelength {} out of operation range ({}, {})'.format(wl, *self.wavelength_limits))
         return wl
 
-    @Feat(limits=(0, 800000))
+    @Feat(limits=(0, 100000))
     def position(self):
         return self.send_instruction(6, typ=1, mot=0, val=0)
 
