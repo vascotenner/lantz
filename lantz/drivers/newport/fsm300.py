@@ -133,7 +133,7 @@ class FSM300(Driver):
     def line_scan(self, init_point, final_point, steps, acq_task, acq_rate=Q_('20 kHz'), pts_per_pos=100):
         init_point = enforce_point_units(init_point)
         final_point = enforce_point_units(final_point)
-
+        timeout = enforce_point_units(1.5*(pts_per_pos*steps/acq_rate), units='s')
         # AO smooth move to initial point
         self.abs_position = init_point
         step_voltages = self.ao_linear_func(init_point, final_point, steps)
@@ -169,7 +169,7 @@ class FSM300(Driver):
             acq_task.arm_start_trigger_type = 'digital_edge'
             acq_task.start()
             self.task.start()
-            scanned = acq_task.read(samples_per_channel=len(step_voltages), timeout=Q_(10.0,'s'))
+            scanned = acq_task.read(samples_per_channel=len(step_voltages), timeout=timeout)
             acq_task.stop()
             self.task.stop()
             scanned = scanned.reshape((steps, pts_per_pos + 1))
@@ -193,7 +193,7 @@ class FSM300(Driver):
             self.task.configure_trigger_digital_edge_start('ai/StartTrigger')
             self.task.start()
             acq_task.start()
-            scanned = acq_task.read(samples_per_channel=len(step_voltages), timeout=Q_(10.0,'s'))
+            scanned = acq_task.read(samples_per_channel=len(step_voltages), timeout=timeout)
             acq_task.stop()
             self.task.stop()
             scanned = scanned.reshape((steps, pts_per_pos))
