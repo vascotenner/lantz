@@ -72,7 +72,7 @@ class AnalogInputTask(Task):
         return value
 
     @Action(units=(None, 'seconds', None), values=(None, None, _GROUP_BY))
-    def read(self, samples_per_channel=None, timeout=10.0, group_by='channel'):
+    def read(self, samples_per_channel=None, timeout=Q_(10.0, 's'), group_by='channel'):
         """Reads multiple floating-point samples from a task that
         contains one or more analog input channels.
 
