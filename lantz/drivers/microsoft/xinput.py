@@ -88,7 +88,7 @@ class _XInputController(QtCore.QObject):
         state = self.get_state()
         if state is None:
             raise RuntimeError()
-        if state.packet_number != self._last_state.packet_number:
+        if self._last_state is None or state.packet_number != self._last_state.packet_number:
             self.handle_changed_state(state)
         self._last_state = state
         return
@@ -139,12 +139,18 @@ class XInputController(Driver):
         return
 
     def set_axis_callback(self, f):
-        self.controller.on_axis.disconnect()
+        try:
+            self.controller.on_axis.disconnect()
+        except TypeError:
+            pass
         self.controller.on_axis.connect(f)
         return
 
     def set_button_callback(self, f):
-        self.controller.on_button.disconnect()
+        try:
+            self.controller.on_button.disconnect()
+        except TypeError:
+            pass
         self.controller.on_button.connect(f)
         return
 
