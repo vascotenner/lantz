@@ -313,21 +313,37 @@ class SR7265(MessageBasedDriver):
         """
         return self.write('AXO')
 
-    @Feat(values={True: '1', False: '0'})
+    @Feat(values={True: 1, False: 0})
     def x_offset_enabled(self):
-        return self.query('XOF?')
-    
+        return int(self.query('XOF?').split(',')[0])
+
     @x_offset_enabled.setter
     def x_offset_enabled(self, val):
         return self.write('XOF {}'.format(val))
 
-    @Feat(values={True: '1', False: '0'})
+    @Feat(values={True: 1, False: 0})
     def y_offset_enabled(self):
-        return self.query('YOF?')
-    
+        return int(self.query('YOF?').split(',')[0])
+
     @x_offset_enabled.setter
     def y_offset_enabled(self, val):
         return self.write('YOF {}'.format(val))
+
+    @Feat()
+    def x_offset(self):
+        return int(self.query('XOF?').split(',')[1])
+
+    @x_offset.setter
+    def x_offset(self, val):
+        return self.write('XOF 1 {}'.format(val))
+
+    @Feat()
+    def y_offset(self):
+        return int(self.query('YOF?').split(',')[1])
+
+    @y_offset.setter
+    def y_offset(self, val):
+        return self.write('YOF 1 {}'.format(val))
 
 if __name__ == '__main__':
     with SR7265.via_gpib(7) as inst:

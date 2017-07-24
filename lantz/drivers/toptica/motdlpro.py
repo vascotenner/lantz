@@ -257,7 +257,7 @@ class MotDLpro(Driver):
         self.set_sap_for_all_motors(140, 4)     # set microstep resolution to 16 microsteps (parameter value = 4)
 
         # vvv this was commented
-        self.set_sap_for_all_motors(143, 1)     # set rest current to approximately 12%
+        # self.set_sap_for_all_motors(143, 1)     # set rest current to approximately 12%
 
         self.set_sap_for_all_motors(153, 7)     # set ramp to 7
         self.set_sap_for_all_motors(154, 3)     # set pulse to 3
@@ -364,23 +364,23 @@ class MotDLpro(Driver):
             raise ValueError('wavelength {} out of operation range ({}, {})'.format(wl, *self.wavelength_limits))
         return wl
 
-    @Feat(limits=(0, 100000))
+    @Feat(limits=(0, 300000))
     def position(self):
-        return self.send_instruction(6, typ=1, mot=0, val=0)
+        return int(self.send_instruction(6, typ=1, mot=0, val=0))
 
     @position.setter
     def position(self, step):
         step = int(step)
         ret = self.send_instruction(4, typ=0, mot=0, val=step)
-
+        time.sleep(0.25)
         now = time.time()
-        while time.time() < (now + 20.0):
+        while time.time() < (now + 10.0):
             if step == self.position:
                 break
             else:
                 time.sleep(0.1)
         else:
-            print('timeout, needed to get to {}, stopped at {}'.format(step, self.position))
+            raise MotDLproError('timeout, needed to get to {}, stopped at {}'.format(step, self.position))
         return
 
     @Feat()
@@ -408,9 +408,14 @@ class MotDLpro(Driver):
             upper + self.step_margin,
         ]
         offset_position = np.clip(*args)
-        self.position = offset_position
-        self.position = target_position
-        return
+        status = True
+        try:
+            self.position = offset_position
+            time.sleep(0.25)
+            self.position = target_position
+        except MotDLproError:
+            status = False
+        return status
 
     # @Action()
     # def precision_move(self, step, direction=1):
@@ -493,6 +498,9 @@ class MotDLpro(Driver):
 
 
 class TMCLError(Exception):
+    pass
+
+class MotDLproError(Exception):
     pass
 
 def test():
