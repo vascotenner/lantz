@@ -12,7 +12,7 @@ from lantz.driver import Action
 from lantz.drivers.ni.daqmx import DigitalOutputTask, DigitalOutputChannel
 import numpy as np
 
-class Digital_Switch(Driver):
+class DigitalSwitch(Driver):
 
     def __init__(self, ch='/dev1/po.0'):
         super().__init__()
