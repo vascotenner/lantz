@@ -29,6 +29,7 @@ class VimbaCam(Driver):
         self.frame = self.cam.getFrame()
         self.frame.announceFrame()
         self.cam.startCapture()
+        return
 
     def finalize(self):
         self.vimba.shutdown()
