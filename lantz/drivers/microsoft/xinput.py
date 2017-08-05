@@ -41,14 +41,11 @@ class _XInputController(QtCore.QObject):
     on_axis = QtCore.pyqtSignal(str, float)
     on_button = QtCore.pyqtSignal(int, bool)
 
-    #start = pyqtSignal()
-
     def __init__(self, device_number, input_deadzone=0.01):
         self.device_number = device_number
         self.input_deadzone = input_deadzone
         super().__init__()
         self._last_state = self.get_state()
-        #self.start.connect(self.poll)
         return
 
     @staticmethod
@@ -80,24 +77,20 @@ class _XInputController(QtCore.QObject):
         result = xinput.XInputGetState(self.device_number, ctypes.byref(state))
         if result == ERROR_SUCCESS:
             return state
-        elif result != ERROR_DEVICE_NOT_CONNECTED:
+        elif result == ERROR_DEVICE_NOT_CONNECTED:
+            return None
+        else:
             raise RuntimeError()
-        return None
 
     def dispatch_events(self):
         state = self.get_state()
         if state is None:
             raise RuntimeError()
-        if self._last_state is None or state.packet_number != self._last_state.packet_number:
+        if self._last_state is not None and state.packet_number != self._last_state.packet_number:
             self.handle_changed_state(state)
         self._last_state = state
         return
-
-    def poll(self):
-        while 1:
-            self.dispatch_events()
-        return
-
+        
     def handle_changed_state(self, state):
         self.dispatch_axis_events(state)
         self.dispatch_button_events(state)
@@ -131,6 +124,12 @@ class _XInputController(QtCore.QObject):
 
     def button_event(self, button, pressed):
         pass
+
+    def shutdown(self, offset=103):
+        shutdown_f_type = ctypes.CFUNCTYPE(ctypes.c_int)
+        shutdown_f = shutdown_f_type(xinput._handle + offset)
+        shutdown_f(self.device_number)
+        return
 
 class XInputController(Driver):
 
