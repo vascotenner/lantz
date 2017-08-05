@@ -14,6 +14,7 @@
 from lantz.driver import Driver
 from lantz import Feat, DictFeat, Action
 from pymba import Vimba
+import numpy as np
 
 
 class VimbaCam(Driver):
@@ -23,16 +24,15 @@ class VimbaCam(Driver):
         self.vimba.startup()
         self.cam = self.vimba.getCamera(self.vimba.getCameraIds()[0])
         self.cam.openCamera()
-        
+
         self.cam.PixelFormat = 'Mono8'
-        # cam.AcquisitionMode = 'SingleFrame'
-        # cam.TriggerSource = 'Freerun'
         self.frame = self.cam.getFrame()
         self.frame.announceFrame()
         self.cam.startCapture()
 
     def finalize(self):
         self.vimba.shutdown()
+        return
 
     @Action()
     def getFrame(self):
@@ -40,7 +40,6 @@ class VimbaCam(Driver):
             self.frame.queueFrameCapture()
             success = True
         except:
-            # droppedframes.append(framecount)
             success = False
 
         self.cam.runFeatureCommand('AcquisitionStart')
@@ -54,4 +53,6 @@ class VimbaCam(Driver):
                 'shape': (self.frame.height, self.frame.width, 1),
             }
             img = np.ndarray(**img_config)
-        return img[...,0]
+            return img[...,0]
+        else:
+            return None
