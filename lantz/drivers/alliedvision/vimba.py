@@ -23,16 +23,18 @@ class VimbaCam(Driver):
         self.vimba.startup()
         self.cam = self.vimba.getCamera(self.vimba.getCameraIds()[0])
         self.cam.openCamera()
-        
+
         self.cam.PixelFormat = 'Mono8'
         # cam.AcquisitionMode = 'SingleFrame'
         # cam.TriggerSource = 'Freerun'
         self.frame = self.cam.getFrame()
         self.frame.announceFrame()
         self.cam.startCapture()
+        return
 
     def finalize(self):
         self.vimba.shutdown()
+        return
 
     @Action()
     def getFrame(self):
