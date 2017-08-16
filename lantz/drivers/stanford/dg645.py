@@ -119,7 +119,7 @@ class DG645(MessageBasedDriver):
                    ('Line', 6)
                    ])
 
-    @Feat()
+    @Feat(read_once=True)
     def idn(self):
         self.clear_errors()
         return self.query('*IDN?')
