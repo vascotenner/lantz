@@ -3,6 +3,7 @@ from lantz.driver import Driver
 from collections import OrderedDict
 import time
 import ripy
+import numpy as np
 
 class RI(Driver):
 
@@ -20,8 +21,14 @@ class RI(Driver):
         super(RI, self).__init__()
         self._ripy = ripy.Device()
         self._ripy.open()
-        self.sample_rate = self._ripy.samplerate
-        self.usb_speed = self._ripy.usb_speed
+
+    @Feat(units = "Hz")
+    def sample_rate(self):
+        return self._ripy.samplerate
+
+    @Feat()
+    def usb_speed(self):
+        return self._ripy.usb_speed
 
     @Feat(values = gain_values)
     def gain(self):
