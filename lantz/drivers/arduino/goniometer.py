@@ -10,7 +10,7 @@
 
 """
 
-from lantz import Action, Feat, DictFeat
+from lantz import Action, Feat, DictFeat, Q_
 from lantz.messagebased import MessageBasedDriver
 
 from pyvisa.constants import Parity, StopBits
@@ -41,32 +41,33 @@ class Goniometer(MessageBasedDriver):
 	-50:  'no error',
 	}
 
-		
+
 	def initialize(self):
 		super().initialize()
 		time.sleep(2)
 		self.query('stop')
-		time.sleep(2)
-	
+
 	def check_error(self, err):
 		if err != -50:
 			raise Exception(self.errors[err])
 		else:
-			print("Success")
-	
+			return
+
 	def query(self, cmd):
 		self.write(cmd)
 		ans = self.read()
 		err = int(self.read())
 		self.check_error(err)
 		return ans
-	
+
 	@Feat(limits=(70, 110, 0.01))
 	def theta(self):
 		return float(self.query('theta?'))
 
 	@theta.setter
 	def theta(self, val):
+		while(self.state != 'ready'):
+			time.sleep(0.1)
 		float(self.query('theta {}'.format(val)))
 
 	@Feat(limits=(30, 135, 0.01))
@@ -75,29 +76,53 @@ class Goniometer(MessageBasedDriver):
 
 	@phi.setter
 	def phi(self, val):
+		while(self.state != 'ready'):
+			time.sleep(0.1)
 		return float(self.query('phi {}'.format(val)))
-		
-	@Feat() # units = mm
+
+	@Feat(units='mm', limits=(0., 250.))
 	def R(self):
-		return float(self.query('getr'))
-	
+		return float(self.query('getr?'))
+
 	@R.setter
 	def R(self, val):
-		return self.query('abs {}'.format(val))
-	
-	@Feat()
+		while(self.state != 'ready'):
+			time.sleep(0.1)
+		return self.query('rabs {}'.format(val))
+
+	@Feat(values={'ready':'0', 'moving':'1'})
 	def state(self):
 		return self.query('state?')
-		
-	@Feat()
+
+	@Action()
 	def stop(self):
 		self.query('stop')
-		
+
 	@Feat()
 	def period(self):
 		return self.query('period?')
-	
+
 	@period.setter
 	def period(self, val):
 		return self.query('pperiod {}'.format(val))
 
+	@Action()
+	def unsafe_R_relative_move(self, distance):
+		if type(distance) == Q_:
+			distance = distance.to('mm').m
+		if abs(distance)>= 25:
+			raise ValueError("Cannot do relative move of more then 25 mm")
+		return self.query('unsafe_rrel {}'.format(distance))
+		# return self.query('rrot 2 {}'.format(int(distance*3200)))
+
+	@Action()
+	def return_to_origin(self):
+		self.phi = 90
+		self.theta = 90
+
+	@Action()
+	def zero(self, axis):
+		if not axis in [0,1,2]:
+			raise ValueError('Axis must be 0, 1 or 2')
+		else:
+			return self.query('zero {}'.format(axis))
