@@ -229,8 +229,6 @@ class AnalogOutputTask(Task):
             else:
                 samples_per_channel = data.shape[-1]
 
-        #print(data)
-
         samps_per_channel = int(samples_per_channel)
 
         err, count = self.lib.WriteAnalogF64(samps_per_channel, auto_start,
@@ -423,8 +421,6 @@ class DigitalOutputTask(DigitalTask):
             data = np.array([data]*number_of_channels, dtype = np.uint8)
         else:
             data = np.asarray(data, dtype = np.uint8)
-
-        print(data)
 
         if data.ndim == 1:
             if number_of_channels == 1:

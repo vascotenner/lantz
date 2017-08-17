@@ -162,7 +162,7 @@ class ANC350(LibraryDriver):
     # ----------------------------------------------
     # Closed-loop Actions
     # These action are much slower but they ensure the move completed
-    @Action(units=('um', 'um', None, 'seconds', None, None))
+    @Action(units=(None, 'um', 'um', None, 'seconds', None, None))
     def cl_move(self, axis, pos, delta_z=Q_(0.1,'um'), iter_n=10, delay=Q_(0.01, 's'), debug=False, max_iter=1000):
         i = 0
         while(not self.at_pos(Q_(pos, 'um'), delta_z=Q_(delta_z, 'um'), iter_n=iter_n, delay=Q_(delay,'s'))):
@@ -173,7 +173,7 @@ class ANC350(LibraryDriver):
         if debug: print("It took {} iterations to move to position".format(i))
         return
 
-    @Action(units=('um', 'um', None, 'seconds'))
+    @Action(units=(None, 'um', 'um', None, 'seconds'))
     def at_pos(self, axis, pos, delta_z=Q_(0.1,'um'), iter_n=10, delay=Q_(0.01, 's')):
         for i in range(iter_n):
             time.sleep(delay)
