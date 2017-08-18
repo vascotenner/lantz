@@ -2,12 +2,15 @@ import ctypes
 import time
 from io import BytesIO
 import struct
+import numpy as np
 
 from lantz.foreign import LibraryDriver
 from lantz import Feat, DictFeat, Action
 
 TTREADMAX = 131072
 FIFOFULL = 0x0003
+
+t2_wraparound = 210698240
 
 class PH300(LibraryDriver):
 
@@ -97,74 +100,40 @@ class PH300(LibraryDriver):
                 databuf.write(bytes(buf)[:n_read.value * 4])
             else:
                 break
+        databuf.seek(0)
         return databuf
 
-    def gen_raw_tttr(self):
-        buf = (ctypes.c_uint * nvalues)()
-        n_to_read = ctypes.c_uint(TTREADMAX)
-        n_read = ctypes.c_uint(0)
+    @Action()
+    def read_timestamps(self, nvalues=TTREADMAX):
+        databuf = self.read_fifo(nvalues=nvalues)
+        c1 = list()
+        c2 = list()
+        overflow_time = 0
+        resolution = self.resolution
         while 1:
-            if self.flags & FIFOFULL:
+            chunk = buf.read(4)
+            if not chunk:
                 break
-            retcode = self.lib.ReadFiFo(self.device_idx, ctypes.byref(buf), n_to_read, ctypes.byref(n_read))
-            if retcode < 0:
-                break
-            if n_read.value:
-                yield bytes(buf)[:n_read.value * 4]
+            chunk = struct.unpack('<I', chunk)[0]
+            time = chunk & 0x0FFFFFFF
+            channel = (chunk & 0xF0000000) >> 28
+            if channel == 0xF:
+                markers = time & 0xF
+                if not markers:
+                    overflow_time += t2_wraparound
+                else:
+                    truetime = overflow_time + time
             else:
-                break
-        return
+                if channel > 4:
+                    raise RuntimeError('invalid channel encountered: {}'.format(channel))
+                else:
+                    truetime = (overflow_time + time) / 1e9 * resolution
+                    if channel >= 1:
+                        c2.append(truetime)
+                    else:
+                        c1.append(truetime)
+        return c1, c2
 
     def finalize(self):
         self.lib.CloseDevice(self.device_idx)
         return
-
-def test():
-    ph = PH300(0)
-    ph.initialize()
-    ph.set_sync_div(1)
-    ph.set_input_cfd(0, 50, 10)
-    ph.set_input_cfd(1, 50, 10)
-    ph.set_binning(0)
-    ph.set_offset(0)
-
-    print(ph.count_rate[0], ph.count_rate[1])
-
-    ph.start_measurement(1000)
-    buf = ph.read_fifo(TTREADMAX)
-    ph.stop_measurement()
-    fifo_reader(buf)
-    print(ph.count_rate[0], ph.count_rate[1])
-    return
-
-def fifo_reader(buf, resolution=4.0):
-    buf.seek(0)
-    t2_wraparound = 210698240
-
-    counts = [0, 0]
-    ofl_time = 0
-    while 1:
-        chunk = buf.read(4)
-        if not chunk:
-            break
-        chunk = struct.unpack('<I', chunk)[0]
-
-        time = chunk & 0x0FFFFFFF
-        channel = (chunk & 0xF0000000) >> 28
-        if channel == 0xF:
-            # special record
-            markers = time & 0xF
-            if not markers:
-                # overflow encountered
-                ofl_time += t2_wraparound
-            else:
-                # marker encountered
-                truetime = ofl_time + time
-        else:
-
-            if channel > 4:
-                raise RuntimeError("illegal channel encountered")
-            else:
-                counts[(channel >= 1)] += 1
-                truetime = (ofl_time + time) / 1e9 * resolution
-                # print('{}\t{}\t{}'.format(truetime, *counts))
