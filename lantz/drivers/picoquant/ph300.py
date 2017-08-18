@@ -111,7 +111,7 @@ class PH300(LibraryDriver):
         overflow_time = 0
         resolution = self.resolution
         while 1:
-            chunk = buf.read(4)
+            chunk = databuf.read(4)
             if not chunk:
                 break
             chunk = struct.unpack('<I', chunk)[0]
