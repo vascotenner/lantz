@@ -82,7 +82,7 @@ class Goniometer(MessageBasedDriver):
 
 	@Feat(units='mm', limits=(0., 250.))
 	def R(self):
-		return float(self.query('getr?'))
+		return float(self.query('raxis?'))
 
 	@R.setter
 	def R(self, val):
@@ -112,8 +112,7 @@ class Goniometer(MessageBasedDriver):
 			distance = distance.to('mm').m
 		if abs(distance)>= 25:
 			raise ValueError("Cannot do relative move of more then 25 mm")
-		return self.query('unsafe_rrel {}'.format(distance))
-		# return self.query('rrot 2 {}'.format(int(distance*3200)))
+		return self.query('rrel {}'.format(distance))
 
 	@Action()
 	def return_to_origin(self):
@@ -126,3 +125,14 @@ class Goniometer(MessageBasedDriver):
 			raise ValueError('Axis must be 0, 1 or 2')
 		else:
 			return self.query('zero {}'.format(axis))
+
+	@Feat(values={'on':'0', 'off':'1'})
+	def emergency_switch(self):
+		return self.query('switch?')
+
+	@switch.setter
+	def emergency_switch(self, state):
+		if state == 'on':
+			return self.query('lock')
+		else:
+			return self.query('unlock')
