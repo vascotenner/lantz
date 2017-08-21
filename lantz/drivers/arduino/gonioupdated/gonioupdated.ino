@@ -10,8 +10,6 @@ const int encoderAP = 3;
 const int encoderBP = 12;
 const int switchPin = 2;
 
-
-
 /// Constants
 const float pi = 3.14159265;
 const float RadtoDeg = 57.2957795;
@@ -20,23 +18,19 @@ const float axis1DegtoSteps = 0.00079069;
 const float axis2Conversion = 3200;
 const long initial_pos[] = {0L,113825L, 0L};
 
-
-
 /// Limits for the different values
 const float THETA_LIMITS[] = {70., 115.};
 const float PHI_LIMITS[]   = {30., 180.};
 const float ALPHA_LIMITS[] = {-100., 21.};
 const float BETA_LIMITS[]  = {-135., 135.};
-
 const int PERIOD_LIMITS[] = {20, 500};
-const float R_LIMITS[] = {0,100};
+const float R_LIMITS[] = {-100,100};
 
 /// Global Vars
 int axis_increment[]  = {1, 1, 1};
 long axis_remainder[] = {0, 0, 0};
-int pinDelay = 50;
+int pinDelay = 100;
 long steps[] = {0L,113825L, 0L};
-volatile unsigned long encoderPos = 0;
 int switch_state = 0;
 
 
@@ -47,9 +41,7 @@ int switch_state = 0;
 int run_state = 0;
 int unlock = 0;
 
-
 String input;
-
 
 ///--------------------------------------------------------------------------------------------
 ///                   High Level Commands
@@ -65,59 +57,21 @@ String input;
 ///    -11:  other error
 ///    -50:  no error
 
-
-/// Print alpha, beta
-/// alpha = 0
-/// beta  = 1
-float get_rot(int axis){
-  long steps;
-  float ret = getSteps(axis, steps);
-  if (!ret) {
-    //Serial.println(steps);
-  }
-  return ret;
-}
-
-long get_R(){
-  long encoderPos;
-  long ret = -getEncoder(encoderPos)/axis2Conversion;
-  return ret;
-}
-//long absR(){
-//  float value = get_R() / axis2Conversion;
-//  return value;
-//}
-/// Get theta and phi from alpha and beta position
+/// Get alpha, beta
+/// theta     = 0
+/// phi       = 1
 float get_sphere(int angle){
   float alpha = float(steps[0]) * axis0DegtoSteps / RadtoDeg;
   float beta = float(steps[1])* axis1DegtoSteps / RadtoDeg;
   float theta;
   float phi;
-  float ret = motor2spher(alpha, beta, theta, phi);
-  if (ret == -50){
-    if (angle == 0){
-      //Serial.println(theta);
-      return theta;
-    }
-    else if (angle == 1){
-      //Serial.println(phi);
-      return phi;
-    }
-    else if (angle == 3){
-      Serial.println(theta);
-      return ret;
-    }
-    else if (angle == 4){
-      Serial.println(phi);
-      return ret;
-    }
-    else {
-      Serial.println(String(theta)+","+String(phi));
-      return ret;
-    }
+  int ret = motor2spher(alpha, beta, theta, phi);
+  if (angle == 0){
+    return theta;
   }
   else {
-  return -11;}
+    return phi;
+  }
 }
 /// Get theta from alpha and beta
 float get_theta(){
@@ -180,27 +134,21 @@ float set_phi(float phi){
   }
 }
 
-
-/// Relative move in spherical coordinates
-float rsphere(float theta, float phi) {
-
-}
-int rRaxis(float relSteps){
-  long rSteps = get_R() + relSteps;
-  return rR(-relSteps*axis2Conversion);
-}
-
-
-int aRaxis(float absSteps){
-  if (valid_raxis(absSteps)){
-    return aR(-absSteps*axis2Conversion);
+float set_R(float abs_r){
+  if (valid_raxis(abs_r)){
+    return absoluteRotate(2, abs_r*axis2Conversion);
   }
-  else {
+  else{
     return -9;
   }
-
+  
 }
 
+
+/// Relative move in spherical coordinates
+float rel_R(float rel_r){
+  return relativeRotate(2, rel_r*axis2Conversion);
+}
 
 ///Set the interupt delay in us
 int pperiod(int period){
@@ -225,15 +173,6 @@ int stop_move(){
   return -50;
 }
 
-//int emergency_stop(){
-//  Timer1.stop();
-//  run_state = 0;
-//  axis_remainder[0] = 0;
-//  axis_remainder[1] = 0;
-//  return -8;
-//
-//}
-
 int get_state(){
   return run_state;
 }
@@ -244,26 +183,11 @@ int get_state(){
 ///--------------------------------------------------------------------------------------------
 
 void setup() {
-  //pinMode(encoderAP, INPUT_PULLUP);
-  //digitalWrite(encoderAP, HIGH);
-  //pinMode(encoderBP, INPUT_PULLUP);
-  //digitalWrite(encoderBP, HIGH);
-  //pinMode(switchPin, INPUT);
-
-
-
   Serial.begin(9600);
-
 
   Timer1.initialize(pinDelay);
   Timer1.stop();
   Timer1.attachInterrupt(ISR_rotate);
-  //attachInterrupt(0, switchInterrupt, CHANGE);
-  //attachInterrupt(1, onInterrupt, RISING);
-
-
-
-
 
   while (Serial.available() > 0) {
     Serial.read();
@@ -293,7 +217,6 @@ void loop() {
 
 }
 
-
 ///Decide what to execute
 void exec_cmd(){
   ///Parse Input
@@ -309,26 +232,9 @@ void exec_cmd(){
   //Exec Cmd
   int ret;
 
-  if (cmd == "aen"){
-    if (digitalRead(encoderAP)==HIGH){
-      Serial.println(9);
-    }
-    else {
-      Serial.println(8);
-    }
-  }
-
-  if (cmd == "ben"){
-    if (digitalRead(encoderBP)==HIGH){
-      Serial.println(7);
-    }
-    else {
-      Serial.println(6);
-    }
-  }
-
   if (cmd == "rot?") {
-    ret = get_rot(arg1.toInt());
+    Serial.println(getSteps(arg1.toInt()));
+    ret = -50;
   }
   else if (cmd == "rrot") {
     ret = rrot(arg1.toInt(), arg2.toInt());
@@ -338,29 +244,9 @@ void exec_cmd(){
     ret = zero(arg1.toInt());
     Serial.println(0);
   }
-//  else if (cmd == "zeror"){
-//    Serial.println(zeroR());
-//    ret = -50;
-//  }
   else if (cmd == "arot") {
     ret = arot(arg1.toInt(), arg2.toInt());
     Serial.println(0);
-  }
-  else if (cmd == "unsafe_rrel") {
-    ret = rRaxis(arg1.toInt());
-    Serial.println(0);
-  }
-  else if (cmd == "rabs") {
-    ret = aRaxis(arg1.toInt());
-    Serial.println(0);
-  }
-//  else if (cmd == "absr") {
-//    Serial.println(absR());
-//    ret = -50;
-//  }
-  else if (cmd == "getr?") {
-    Serial.println(get_R());
-    ret = -50;
   }
   else if (cmd == "asphere"){
     ret = asphere(arg1.toFloat(), arg2.toFloat());
@@ -373,6 +259,18 @@ void exec_cmd(){
   else if (cmd == "phi"){
     ret = set_phi(arg1.toFloat());
     Serial.println(0);
+  }
+  else if (cmd == "rabs"){
+    ret = set_R(arg1.toFloat());
+    Serial.println(0);
+  }
+  else if (cmd == "rrel"){
+    ret = rel_R(arg1.toFloat());
+    Serial.println(0);
+  }
+  else if (cmd == "raxis?"){
+    Serial.println(getSteps(2)/axis2Conversion);
+    ret = -50;
   }
   else if (cmd == "period?"){
     Serial.println(pinDelay);
@@ -406,18 +304,17 @@ void exec_cmd(){
     ret = -50;
   }
   else if (cmd == "sphere?") {
-    ret = get_sphere(5);
+    Serial.println(String(get_theta())+","+String(get_phi()));
+    ret = -50;
   }
   else if (cmd == "theta?") {
-    ret = get_sphere(3);
+    Serial.println(get_theta());
+    ret = -50;
   }
   else if (cmd == "phi?") {
-    ret = get_sphere(4);
+    Serial.println(get_phi());
+    ret = -50;
   }
-//  else if (cmd == "origin") {
-//    ret = asphere(90, 0);
-//    Serial.println(0);
-//  }
   else{
     Serial.println(0);
     ret = -10;
@@ -439,7 +336,7 @@ void exec_cmd(){
 ///     -3:  other error
 ///      0:  no error
 
-float motor2spher(float alpha, float beta, float &theta, float &phi) {
+int motor2spher(float alpha, float beta, float &theta, float &phi) {
   float thetaRad = acos(sin(alpha) * sin(beta));
   float phiRad = acos(cos(beta) / sin(thetaRad));
   theta = thetaRad * RadtoDeg;
@@ -447,7 +344,7 @@ float motor2spher(float alpha, float beta, float &theta, float &phi) {
   return -50;
 
 }
-float spher2motorangles(float theta, float phi, float &alpha, float &beta){
+int spher2motorangles(float theta, float phi, float &alpha, float &beta){
   float delta = 0.000001;
 
   if (valid_theta_phi(theta, phi)) {
@@ -519,7 +416,7 @@ bool valid_raxis(float r){
   return (r >= R_LIMITS[0] && r <= R_LIMITS[1]);
 }
 
-float rotateTo(float alpha, float beta){
+int rotateTo(float alpha, float beta){
   if (run_state == 0){
     if (valid_alpha_beta(alpha, beta)){
       absoluteRotate(0, alpha / axis0DegtoSteps);
@@ -535,109 +432,47 @@ float rotateTo(float alpha, float beta){
   }
 }
 
-float getSteps(int axis, long &retSteps) {
-  retSteps = steps[axis];
-  return retSteps;
-}
-long getEncoder(long &retEncoder){
-  retEncoder = encoderPos;
-  return retEncoder;
+/// Get alpha, beta
+/// alpha = 0
+/// beta  = 1
+/// R     = 2
+long getSteps(int axis) {
+  return steps[axis];
 }
 
 int relativeRotate(int axis, long relSteps) {
-  //steps[axis] += relSteps;
-  //rotate(axis, relSteps);
   setup_rotate(axis, relSteps);
-  return -50;
-}
-
-int relativeR(long relSteps){
-  setup_R(relSteps);
   return -50;
 }
 
 int absoluteRotate(int axis, long absSteps) {
   long relSteps = absSteps - steps[axis];
   relativeRotate(axis, relSteps);
-  //steps[axis] = absSteps;
-  //rotate(axis, relSteps);
-  return -50;
-}
-int aR(long absSteps){
-  long relSteps = absSteps - encoderPos;
-  rR(relSteps);
-  return -50;
-}
-int rR(long relSteps){
-  setup_R(relSteps);
   return -50;
 }
 
 int zero(int axis) {
-  if (axis==2){
-    encoderPos = 0;
-  }
-  else{
-    steps[axis] = initial_pos[axis];
-  }
+  steps[axis] = initial_pos[axis];
   return -50;
 }
-//long zeroR(){
-//  encoderPos = 0;
-//  return -50;
-//}
 
-void rotate(int axis, long steps) {
-  if (steps < 0) {
-    digitalWrite(dirPins[axis], LOW);
-  } else {
-    digitalWrite(dirPins[axis], HIGH);
-  }
-  delayMicroseconds(pinDelay);
-  for (int i = 0; i < abs(steps); i++) {
-    digitalWrite(pulPins[axis], HIGH);
-    delayMicroseconds(pinDelay);
-    digitalWrite(pulPins[axis], LOW);
-    delayMicroseconds(pinDelay);
-  }
-}
-
-
-void setup_rotate(int axis, long steps){
+void setup_rotate(int axis, long target_steps){
   Timer1.stop();
 
   ///Setup motion direction
-  if (steps < 0) {
+  if (target_steps < 0) {
     axis_increment[axis] = -1;
     digitalWrite(dirPins[axis], LOW);
   } else {
     axis_increment[axis] = 1;
     digitalWrite(dirPins[axis], HIGH);
   }
-
   /// Setup number of steps
-  axis_remainder[axis]=abs(steps);
+  axis_remainder[axis]=abs(target_steps);
 
   Timer1.start();
   run_state = 1;
-
 }
-void setup_R(long target){
-  Timer1.stop();
-
-  if (target < 0){
-    axis_increment[2] = -1;
-    digitalWrite(dirPins[2], HIGH);
-  }
-  else {
-    axis_increment[2] = 1;
-    digitalWrite(dirPins[2], LOW);
-  }
-  axis_remainder[2] = abs(target);
-  Timer1.start();
-  run_state = 1;
-}
-
 
 
 void ISR_rotate(){
@@ -650,54 +485,25 @@ void ISR_rotate(){
     switch_state = 0;
   }
   if (switch_state <= 4 or unlock != 0){
-  for (int i = 0; i < 2 ; i++) {
-    if (axis_remainder[i]>0){
-      state = digitalRead(pulPins[i]);
-      digitalWrite(pulPins[i],  state^ 1);
-      if (state == HIGH){
-        axis_remainder[i]--;
-        steps[i] = steps[i] + axis_increment[i];
-        //encoderPos = encoderPos + axis_increment[2];
-
-
+    for (int i = 0; i < 3 ; i++) {
+    
+      if (axis_remainder[i]>0){
+        state = digitalRead(pulPins[i]);
+        digitalWrite(pulPins[i],  state^ 1);
+        
+        if (state == HIGH){
+          axis_remainder[i]--;
+          steps[i] = steps[i] + axis_increment[i];
         }
-
-  }
-  }
-  for (int i=2; i<3; i++) {
-    if (axis_remainder[i]>0){
-      state = digitalRead(pulPins[i]);
-      digitalWrite(pulPins[i],  state^ 1);
-      if (state == HIGH){
-        axis_remainder[i]--;
-        encoderPos = encoderPos + axis_increment[i];
-            }
-
     }
   }
-  if (axis_remainder[0]<=0 and axis_remainder[1]<=0 and axis_remainder[2]<=0){
-    stop_move();
+    if (axis_remainder[0]<=0 and axis_remainder[1]<=0 and axis_remainder[2]<=0){
+      stop_move();
   }
   }
-  else{
+  
+  else {
     stop_move();
     run_state = 0;
   }
-}
-
-
-
-void onInterrupt(){
-  int B = digitalRead(encoderBP);
-  if (HIGH == B){
-    encoderPos--;
-    }
-  else {
-    encoderPos++;
-    }
-  }
-
-int switchInterrupt(){
-  //stop();
-  return -20;
 }
