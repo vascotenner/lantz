@@ -11,6 +11,7 @@
 """
 
 from lantz import Action, Feat, DictFeat, Q_
+from lantz.errors import InstrumentError, LantzTimeoutError
 from lantz.messagebased import MessageBasedDriver
 
 from pyvisa.constants import Parity, StopBits
@@ -31,14 +32,14 @@ class Goniometer(MessageBasedDriver):
 	}
 
 	errors = {
-	 -1:  'theta or phi were out of bounds',
-	 -2:  'alpha or beta were out of bounds',
-	 -3:  'attempted rotateTo while run_state != 0',
-	 -4:  'period is out of bound',
-	 -9:  'R is out of bounds',
-	-10:  'Unknown cmd',
-	-11:  'other error',
-	-50:  'no error',
+		 -1:  'theta or phi were out of bounds',
+		 -2:  'alpha or beta were out of bounds',
+		 -3:  'attempted rotateTo while run_state != 0',
+		 -4:  'period is out of bound',
+		 -9:  'R is out of bounds',
+		-10:  'Unknown cmd',
+		-11:  'other error',
+		-50:  'no error',
 	}
 
 
@@ -49,7 +50,7 @@ class Goniometer(MessageBasedDriver):
 
 	def check_error(self, err):
 		if err != -50:
-			raise Exception(self.errors[err])
+			raise InstrumentError(self.errors[err])
 		else:
 			return
 
@@ -58,6 +59,7 @@ class Goniometer(MessageBasedDriver):
 		ans = self.read()
 		err = int(self.read())
 		self.check_error(err)
+		# time.sleep(self.comm_delay)
 		return ans
 
 	@Feat(limits=(70, 110, 0.01))
@@ -66,19 +68,15 @@ class Goniometer(MessageBasedDriver):
 
 	@theta.setter
 	def theta(self, val):
-		while(self.state != 'ready'):
-			time.sleep(0.1)
-		float(self.query('theta {}'.format(val)))
+		return self.query('theta {}'.format(val))
 
-	@Feat(limits=(30, 135, 0.01))
+	@Feat(limits=(25, 135, 0.01))
 	def phi(self):
 		return float(self.query('phi?'))
 
 	@phi.setter
 	def phi(self, val):
-		while(self.state != 'ready'):
-			time.sleep(0.1)
-		return float(self.query('phi {}'.format(val)))
+		return self.query('phi {}'.format(val))
 
 	@Feat(units='mm', limits=(0., 250.))
 	def R(self):
@@ -86,8 +84,6 @@ class Goniometer(MessageBasedDriver):
 
 	@R.setter
 	def R(self, val):
-		while(self.state != 'ready'):
-			time.sleep(0.1)
 		return self.query('rabs {}'.format(val))
 
 	@Feat(values={'ready':'0', 'moving':'1'})
@@ -98,13 +94,21 @@ class Goniometer(MessageBasedDriver):
 	def stop(self):
 		self.query('stop')
 
-	@Feat()
+	@Feat(units='us', limits=(0,1000,1))
 	def period(self):
-		return self.query('period?')
+		return float(self.query('period?'))
 
 	@period.setter
 	def period(self, val):
-		return self.query('pperiod {}'.format(val))
+		return self.query('pperiod {}'.format(int(val)))
+
+	@Action()
+	def wait_for_ready(self, max_iter=30):
+		for i in range(max_iter):
+			if self.state == 'ready':
+				return
+			time.sleep(self.comm_delay)
+		raise LantzTimeoutError('Could not get a ready state response...')
 
 	@Action()
 	def unsafe_R_relative_move(self, distance):
@@ -114,10 +118,10 @@ class Goniometer(MessageBasedDriver):
 			raise ValueError("Cannot do relative move of more then 25 mm")
 		return self.query('rrel {}'.format(distance))
 
-	@Action()
-	def return_to_origin(self):
-		self.phi = 90
-		self.theta = 90
+	# @Action()
+	# def return_to_origin(self):
+	# 	self.phi = 90
+	# 	self.theta = 90
 
 	@Action()
 	def zero(self, axis):
@@ -130,9 +134,9 @@ class Goniometer(MessageBasedDriver):
 	def emergency_switch(self):
 		return self.query('switch?')
 
-	@switch.setter
-	def emergency_switch(self, state):
-		if state == 'on':
+	@Action()
+	def lock(self, state):
+		if state:
 			return self.query('lock')
 		else:
 			return self.query('unlock')

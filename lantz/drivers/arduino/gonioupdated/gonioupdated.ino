@@ -29,7 +29,7 @@ const float R_LIMITS[] = {-100,100};
 /// Global Vars
 int axis_increment[]  = {1, 1, 1};
 long axis_remainder[] = {0, 0, 0};
-int pinDelay = 50;
+int pinDelay = 100;
 long steps[] = {0L,113825L, 0L};
 int switch_state = 0;
 
@@ -57,49 +57,21 @@ String input;
 ///    -11:  other error
 ///    -50:  no error
 
-
-/// Print alpha, beta
-/// alpha = 0
-/// beta  = 1
-float get_rot(int axis){
-  long ret_steps;
-  float ret = getSteps(axis, ret_steps);
-  return ret;
-}
-
-long get_R(){
-  long ret_steps;
-  long ret = getSteps(2, ret_steps)/axis2Conversion;
-  return ret;
-
+/// Get alpha, beta
+/// theta     = 0
+/// phi       = 1
 float get_sphere(int angle){
   float alpha = float(steps[0]) * axis0DegtoSteps / RadtoDeg;
   float beta = float(steps[1])* axis1DegtoSteps / RadtoDeg;
   float theta;
   float phi;
-  float ret = motor2spher(alpha, beta, theta, phi);
-  if (ret == -50){
-    if (angle == 0){
-      return theta;
-    }
-    else if (angle == 1){
-      return phi;
-    }
-    else if (angle == 3){
-      Serial.println(theta);
-      return ret;
-    }
-    else if (angle == 4){
-      Serial.println(phi);
-      return ret;
-    }
-    else {
-      Serial.println(String(theta)+","+String(phi));
-      return ret;
-    }
+  int ret = motor2spher(alpha, beta, theta, phi);
+  if (angle == 0){
+    return theta;
   }
   else {
-  return -11;}
+    return phi;
+  }
 }
 /// Get theta from alpha and beta
 float get_theta(){
@@ -175,7 +147,7 @@ float set_R(float abs_r){
 
 /// Relative move in spherical coordinates
 float rel_R(float rel_r){
-  return relativeRotate(2, rel_r*axis2Conversion)
+  return relativeRotate(2, rel_r*axis2Conversion);
 }
 
 ///Set the interupt delay in us
@@ -261,7 +233,8 @@ void exec_cmd(){
   int ret;
 
   if (cmd == "rot?") {
-    ret = get_rot(arg1.toInt());
+    Serial.println(getSteps(arg1.toInt()));
+    ret = -50;
   }
   else if (cmd == "rrot") {
     ret = rrot(arg1.toInt(), arg2.toInt());
@@ -296,8 +269,8 @@ void exec_cmd(){
     Serial.println(0);
   }
   else if (cmd == "raxis?"){
-    ret = get_R();
-    Serial.println(0);
+    Serial.println(getSteps(2)/axis2Conversion);
+    ret = -50;
   }
   else if (cmd == "period?"){
     Serial.println(pinDelay);
@@ -331,13 +304,16 @@ void exec_cmd(){
     ret = -50;
   }
   else if (cmd == "sphere?") {
-    ret = get_sphere(5);
+    Serial.println(String(get_theta())+","+String(get_phi()));
+    ret = -50;
   }
   else if (cmd == "theta?") {
-    ret = get_sphere(3);
+    Serial.println(get_theta());
+    ret = -50;
   }
   else if (cmd == "phi?") {
-    ret = get_sphere(4);
+    Serial.println(get_phi());
+    ret = -50;
   }
   else{
     Serial.println(0);
@@ -360,7 +336,7 @@ void exec_cmd(){
 ///     -3:  other error
 ///      0:  no error
 
-float motor2spher(float alpha, float beta, float &theta, float &phi) {
+int motor2spher(float alpha, float beta, float &theta, float &phi) {
   float thetaRad = acos(sin(alpha) * sin(beta));
   float phiRad = acos(cos(beta) / sin(thetaRad));
   theta = thetaRad * RadtoDeg;
@@ -368,7 +344,7 @@ float motor2spher(float alpha, float beta, float &theta, float &phi) {
   return -50;
 
 }
-float spher2motorangles(float theta, float phi, float &alpha, float &beta){
+int spher2motorangles(float theta, float phi, float &alpha, float &beta){
   float delta = 0.000001;
 
   if (valid_theta_phi(theta, phi)) {
@@ -440,7 +416,7 @@ bool valid_raxis(float r){
   return (r >= R_LIMITS[0] && r <= R_LIMITS[1]);
 }
 
-float rotateTo(float alpha, float beta){
+int rotateTo(float alpha, float beta){
   if (run_state == 0){
     if (valid_alpha_beta(alpha, beta)){
       absoluteRotate(0, alpha / axis0DegtoSteps);
@@ -456,18 +432,16 @@ float rotateTo(float alpha, float beta){
   }
 }
 
-float getSteps(int axis, long &retSteps) {
-  retSteps = steps[axis];
-  return retSteps;
+/// Get alpha, beta
+/// alpha = 0
+/// beta  = 1
+/// R     = 2
+long getSteps(int axis) {
+  return steps[axis];
 }
 
 int relativeRotate(int axis, long relSteps) {
   setup_rotate(axis, relSteps);
-  return -50;
-}
-
-int relativeR(long relSteps){
-  setup_R(relSteps);
   return -50;
 }
 
@@ -479,6 +453,7 @@ int absoluteRotate(int axis, long absSteps) {
 
 int zero(int axis) {
   steps[axis] = initial_pos[axis];
+  return -50;
 }
 
 void setup_rotate(int axis, long target_steps){
