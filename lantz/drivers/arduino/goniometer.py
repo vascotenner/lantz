@@ -27,7 +27,7 @@ class Goniometer(MessageBasedDriver):
 			'write_termination': '\n',
 			'read_termination': '\r\n',
 			'baud_rate': 9600,
-			'timeout': 2000,
+			'timeout': 1600,
 		}
 	}
 
@@ -45,7 +45,7 @@ class Goniometer(MessageBasedDriver):
 
 	def initialize(self):
 		super().initialize()
-		time.sleep(2)
+		time.sleep(1.6)
 		self.query('stop')
 
 	def check_error(self, err):
@@ -92,15 +92,31 @@ class Goniometer(MessageBasedDriver):
 
 	@Action()
 	def stop(self):
-		self.query('stop')
+		return self.query('stop')
 
 	@Feat(units='us', limits=(0,1000,1))
-	def period(self):
-		return float(self.query('period?'))
+	def period_alpha(self):
+		return float(self.query('period? 0'))
 
-	@period.setter
-	def period(self, val):
-		return self.query('pperiod {}'.format(int(val)))
+	@period_alpha.setter
+	def period_alpha(self, val):
+		return self.query('pperiod 0 {}'.format(int(val)))
+
+	@Feat(units='us', limits=(0,1000,1))
+	def period_beta(self):
+		return float(self.query('period? 1'))
+
+	@period_beta.setter
+	def period_beta(self, val):
+		return self.query('pperiod 1 {}'.format(int(val)))
+
+	@Feat(units='us', limits=(0,1000,1))
+	def period_R(self):
+		return float(self.query('period? 2'))
+
+	@period_R.setter
+	def period_R(self, val):
+		return self.query('pperiod 2 {}'.format(int(val)))
 
 	@Action()
 	def wait_for_ready(self, max_iter=30):
