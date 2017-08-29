@@ -1,17 +1,12 @@
 # -*- coding: utf-8 -*-
 """
-    lantz.drivers.stanford
-    ~~~~~~~~~~~~~~~~~~~~~~
-
-    :company: Standford Research Systems.
-    :description: Manufactures test instruments for research and industrial applications
-    :website: http://www.thinksrs.com/
-
-    ----
-
-    :copyright: 2015 by Lantz Authors, see AUTHORS for more details.
-    :license: BSD, see LICENSE for more details.
+    lantz.drivers.princetoninstruments.winspec
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    Implementation of Winspec PI Camera over a Socket
+    Author: Berk Diler
+    Date: 29/08/2017
 """
+
 
 from .winspec import Winspec
 
