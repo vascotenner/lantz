@@ -117,9 +117,15 @@ class ANC350(LibraryDriver):
         self.check_error(self.lib.startContinousMove(self.device, axis, start, backward))
         return
 
-    MAX_RELATIVE_MOVE = Q_(40, 'um')
     @Action()
-    def absolute_move(self, axis, target, max_move=MAX_RELATIVE_MOVE):
+    def single_step(self, axis, direction):
+        backward = direction <= 0
+        self.lib.startSingleStep(self.device, axis, backward)
+        return
+
+    MAX_ABSOLUTE_MOVE = Q_(40, 'um')
+    @Action()
+    def absolute_move(self, axis, target, max_move=MAX_ABSOLUTE_MOVE):
         if not max_move is None:
             if abs(self.position[axis]-Q_(target, 'm')) > max_move:
                 raise Exception("Relative move (target-current) is greater then the max_move")
