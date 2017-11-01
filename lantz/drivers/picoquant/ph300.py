@@ -127,7 +127,8 @@ class PH300(LibraryDriver):
                 if channel > 4:
                     raise RuntimeError('invalid channel encountered: {}'.format(channel))
                 else:
-                    truetime = (overflow_time + time) / 1e12 * resolution
+                    # truetime = (overflow_time + time) / 1e12 * resolution
+                    truetime = (overflow_time + time) * resolution
                     if channel >= 1:
                         c2.append(truetime)
                     else:
