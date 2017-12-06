@@ -75,7 +75,7 @@ class ITC4020(MessageBasedDriver):
 
     @ld_current.setter
     def ld_current(self, value):
-        inst.write('SOUR:CURR {:.5f}'.format(value))
+        self.write('SOUR:CURR {:.5f}'.format(value))
 
     @DictFeat(units='W', keys={'photodiode', 'pd', 'thermopile', 'tp', 'power meter'})
     def ld_power(self, method):
