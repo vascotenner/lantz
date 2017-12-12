@@ -72,7 +72,7 @@ class AnalogInputTask(Task):
         return value
 
     @Action(units=(None, 'seconds', None), values=(None, None, _GROUP_BY))
-    def read(self, samples_per_channel=None, timeout=10.0, group_by='channel'):
+    def read(self, samples_per_channel=None, timeout=Q_(10.0, 's'), group_by='channel'):
         """Reads multiple floating-point samples from a task that
         contains one or more analog input channels.
 
@@ -228,8 +228,6 @@ class AnalogOutputTask(Task):
                 samples_per_channel = data.shape[0]
             else:
                 samples_per_channel = data.shape[-1]
-
-        #print(data)
 
         samps_per_channel = int(samples_per_channel)
 
@@ -423,8 +421,6 @@ class DigitalOutputTask(DigitalTask):
             data = np.array([data]*number_of_channels, dtype = np.uint8)
         else:
             data = np.asarray(data, dtype = np.uint8)
-
-        print(data)
 
         if data.ndim == 1:
             if number_of_channels == 1:

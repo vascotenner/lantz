@@ -5,13 +5,14 @@
 
     Implementation of SG396 signal generator
 
-    Author: Kevin Miao
-    Date: 12/15/2015
+    Author: Kevin Miao & Berk Diler
+    Date: 12/15/2015 & 8/21/17
 """
 
 import numpy as np
 from lantz import Action, Feat, DictFeat, ureg
 from lantz.messagebased import MessageBasedDriver
+from collections import OrderedDict
 
 class SG396(MessageBasedDriver):
 
@@ -21,6 +22,27 @@ class SG396(MessageBasedDriver):
                 'read_termination': '\r\n',
             }
         }
+
+        MODULATION_TYPE = OrderedDict([
+            ('AM', 0),
+            ('FM', 1),
+            ('Phase',2),
+            ('Sweep',3),
+            ('Pulse',4),
+            ('Blank',5),
+            ('QAM',7),
+            ('CPM',8),
+            ('VSB',9)
+        ])
+
+        MODULATION_FUNCTION = OrderedDict([
+            ('sine', 0),
+            ('ramp', 1),
+            ('triangle', 2),
+            ('square', 3),
+            ('noise', 4),
+            ('external', 5)
+        ])
 
         # Signal synthesis commands
 
@@ -119,7 +141,7 @@ class SG396(MessageBasedDriver):
         def mod_toggle(self, value):
             self.write('MODL {}'.format(value))
 
-        @Feat(values={'AM': 0, 'FM': 1, 'Phase':2, 'Sweep':3, 'Pulse':4, 'Blank':5, 'QAM':7,'CPM':8, 'VSB':9})
+        @Feat(values=MODULATION_TYPE)
         def mod_type(self):
             """
             Modulation State
@@ -129,3 +151,49 @@ class SG396(MessageBasedDriver):
         @mod_type.setter
         def mod_type(self, value):
             self.write('TYPE {}'.format(value))
+
+        @Feat(values=MODULATION_FUNCTION)
+        def mod_function(self):
+            """
+            Modulation Function
+            """
+            return int(self.query('MFNC?'))
+
+        @mod_function.setter
+        def mod_function(self, value):
+            self.write('MFNC {}'.format(value))
+
+        @Feat(units="Hz", limits=(0.1, 100.e3))
+        def mod_rate(self):
+            """
+            Modulation Rate
+            """
+            return float(self.query('RATE?'))
+
+        @mod_rate.setter
+        def mod_rate(self, val):
+            self.write('RATE {}'.format(val))
+
+        @Feat(limits=(0., 100.))
+        def AM_mod_depth(self):
+            """
+            AM Modulation Depth
+            """
+            return float(self.query('ADEP?'))
+
+        @AM_mod_depth.setter
+        def AM_mod_depth(self, val):
+            self.write('ADEP {}'.format(val))
+
+        @Feat(units="Hz", limits=(0.1, 8.e6))
+        def FM_mod_dev(self):
+            """
+            FM Modulation Deviation
+            """
+            return float(self.query("FDEV?"))
+
+        @FM_mod_dev.setter
+        def FM_mod_setter(self, val):
+            self.write('FDEV {}'.format(val))
+
+

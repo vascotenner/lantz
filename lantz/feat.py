@@ -255,6 +255,7 @@ class Feat(object):
         # and timing, caching, logging and error handling
         with instance._lock:
             current_value = self.get_cache(instance, key)
+
             if not force and value == current_value:
                 instance.log_info('No need to set {} = {} (current={}, force={})', name, value, current_value, force)
                 return

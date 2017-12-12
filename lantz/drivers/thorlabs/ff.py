@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+import os
+
 from lantz import Feat
 from lantz.foreign import LibraryDriver
 from ctypes import c_char_p
@@ -7,7 +9,11 @@ from time import sleep
 
 class FF(LibraryDriver):
 
-    LIBRARY_NAME = 'Thorlabs.MotionControl.FilterFlipper.dll'
+    lib_path = os.path.join(os.environ['PROGRAMFILES'], 'Thorlabs\\Kinesis')
+    lib_name = 'Thorlabs.MotionControl.FilterFlipper.dll'
+
+
+    LIBRARY_NAME = os.path.join(lib_path, lib_name)
     LIBRARY_PREFIX = ''
 
     COM_DELAY = 0.2
@@ -16,7 +22,10 @@ class FF(LibraryDriver):
         """
         serial_no: unique device identifier; found on the label of the device
         """
+        self.prev_path = os.environ['PATH']
+        os.environ['PATH'] = '{}{}{}'.format(self.lib_path, os.pathsep, self.prev_path)
         super(FF, self).__init__(*args, **kwargs)
+        os.environ['PATH'] = self.prev_path
         self.serial_no = c_char_p(str(serial_no).encode('ascii'))
         retval = self.lib.FF_Open(self.serial_no)
         if retval:

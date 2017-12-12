@@ -261,7 +261,7 @@ class LibraryDriver(Driver):
 
 def iter_lib(library_name, folder=''):
     if not library_name:
-        raise StopIteration
+        return
     if isinstance(library_name, str):
         if folder:
             yield os.path.join(folder, library_name)

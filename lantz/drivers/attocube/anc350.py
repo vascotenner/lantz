@@ -117,9 +117,15 @@ class ANC350(LibraryDriver):
         self.check_error(self.lib.startContinousMove(self.device, axis, start, backward))
         return
 
-    MAX_RELATIVE_MOVE = Q_(40, 'um')
     @Action()
-    def absolute_move(self, axis, target, max_move=MAX_RELATIVE_MOVE):
+    def single_step(self, axis, direction):
+        backward = direction <= 0
+        self.lib.startSingleStep(self.device, axis, backward)
+        return
+
+    MAX_ABSOLUTE_MOVE = Q_(40, 'um')
+    @Action()
+    def absolute_move(self, axis, target, max_move=MAX_ABSOLUTE_MOVE):
         if not max_move is None:
             if abs(self.position[axis]-Q_(target, 'm')) > max_move:
                 raise Exception("Relative move (target-current) is greater then the max_move")
@@ -162,22 +168,22 @@ class ANC350(LibraryDriver):
     # ----------------------------------------------
     # Closed-loop Actions
     # These action are much slower but they ensure the move completed
-    @Action(units=('um', 'um', None, 'seconds', None, None))
-    def cl_move(self, z, delta_z=Q_(0.1,'um'), iter_n=10, delay=Q_(0.01, 's'), debug=False, max_iter=1000):
+    @Action(units=(None, 'um', 'um', None, 'seconds', None, None))
+    def cl_move(self, axis, pos, delta_z=Q_(0.1,'um'), iter_n=10, delay=Q_(0.01, 's'), debug=False, max_iter=1000):
         i = 0
-        while(not self.at_pos(Q_(z, 'um'), delta_z=Q_(delta_z, 'um'), iter_n=iter_n, delay=Q_(delay,'s'))):
-            self.position[2] = Q_(z, 'um')
+        while(not self.at_pos(Q_(pos, 'um'), delta_z=Q_(delta_z, 'um'), iter_n=iter_n, delay=Q_(delay,'s'))):
+            self.position[axis] = Q_(pos, 'um')
             i += 1
             if i>=max_iter:
                 raise Exception("Reached max_iter")
         if debug: print("It took {} iterations to move to position".format(i))
         return
 
-    @Action(units=('um', 'um', None, 'seconds'))
-    def at_pos(self, z, delta_z=Q_(0.1,'um'), iter_n=10, delay=Q_(0.01, 's')):
+    @Action(units=(None, 'um', 'um', None, 'seconds'))
+    def at_pos(self, axis, pos, delta_z=Q_(0.1,'um'), iter_n=10, delay=Q_(0.01, 's')):
         for i in range(iter_n):
             time.sleep(delay)
-            if abs(self.position[2].to('um').magnitude-z)>delta_z:
+            if abs(self.position[axis].to('um').magnitude-pos)>delta_z:
                 return False
         return True
     # ----------------------------------------------
