@@ -203,6 +203,6 @@ class FSM300(Driver):
             self.task.stop()
             scanned = scanned.reshape((steps, pts_per_pos))
             averaged = scanned.mean(axis=1)
-            return averaged*acq_rate.to('Hz').magnitude
+            return averaged
         else:
             pass
