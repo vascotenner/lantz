@@ -32,6 +32,9 @@ class Cryostation(Driver):
         Initialize function for Cryostation communication port, uses Python
         sockets library to open socket communication with Cryostation.
         """
+        #print('IP address:{}'.format(self.address))
+        #print('Port:{}'.format(self.port))
+
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.connect((self.address, self.port))
         self.socket.settimeout(self.timeout)

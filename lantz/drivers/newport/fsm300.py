@@ -201,7 +201,8 @@ class FSM300(Driver):
             scanned = acq_task.read(samples_per_channel=len(step_voltages), timeout=timeout)
             acq_task.stop()
             self.task.stop()
-            scanned = scanned.reshape((steps, pts_per_pos)).mean(axis=1)
-            return scanned
+            scanned = scanned.reshape((steps, pts_per_pos))
+            averaged = scanned.mean(axis=1)
+            return averaged
         else:
             pass
