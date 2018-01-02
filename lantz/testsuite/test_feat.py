@@ -261,14 +261,15 @@ class FeatTest(unittest.TestCase):
         obj.eggs = x
         obj.eggs = x + 1
 
-        self.assertEqual(hdl.history, ['Created Spam17',
+        #First item number depends on number of calls of Spam(), hence ignore
+        self.assertEqual(hdl.history[1:], ['Created Spam17',
                                        'Getting eggs',
                                        '(raw) Got 9 for eggs',
                                        'Got 9 for eggs',
                                        'No need to set eggs = 9 (current=9, force=False)',
                                        'Setting eggs = 10 (current=9, force=False)',
                                        '(raw) Setting eggs = 10',
-                                       'eggs was set to 10'])
+                                       'eggs was set to 10'][1:])
 
     def test_units(self):
 
