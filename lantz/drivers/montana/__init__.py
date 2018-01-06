@@ -1,3 +1,3 @@
-from cryostation import Cryostation
+from .cryostation import Cryostation
 
 __all__ = ['Cryostation']
