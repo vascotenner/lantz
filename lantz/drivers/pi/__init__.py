@@ -13,6 +13,6 @@
     :license: BSD, see LICENSE for more details.
 """
 
-from .piezo import Piezo
+from .piezo import Piezo, parse_line, parse_multi
 
-__all__ = ['Piezo']
+__all__ = ['Piezo','parse_line','parse_multi']
