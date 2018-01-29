@@ -63,10 +63,11 @@ class Action(object):
                 changed but only tested to belong to the container.
     :param units: `Quantity` or string that can be interpreted as units.
     :param procs: Other callables to be applied to input arguments.
+    :param log_output: Store the functions output in log
 
     """
 
-    def __init__(self, func=None, *, values=None, units=None, limits=None, procs=None):
+    def __init__(self, func=None, *, values=None, units=None, limits=None, procs=None, log_output=True):
 
         #: instance: key: value
         self.modifiers = WeakKeyDictionary()
@@ -76,6 +77,7 @@ class Action(object):
                                    'units': units,
                                    'limits': limits,
                                    'processors': procs}
+        self.log_output = log_output
         self.func = func
         self.args = ()
 
@@ -126,7 +128,10 @@ class Action(object):
                 tic = time.time()
                 out = self.func(instance, *t_values)
                 instance.timing.add(name, time.time() - tic)
-                instance.log_info('{} returned {}', name, out)
+                if self.log_output:
+                    instance.log_info('{} returned {}', name, out)
+                else:
+                    instance.log_info('{} returned a value of type {}', name, type(out))
 
                 return out
             except Exception as e:
