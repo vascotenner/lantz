@@ -36,7 +36,7 @@ class FSM300(Driver):
     def __init__(self, x_ao_ch, y_ao_ch,
                  ao_smooth_rate=Q_('10 kHz'), ao_smooth_steps=Q_('1000 1/V'),
                  limits=((Q_(-10, 'V'), Q_(10, 'V')), (Q_(-10, 'V'), Q_(10, 'V'))),
-                 cal=(Q_(9.5768, 'um/V'), Q_(7.1759, 'um/V'))):
+                 cal=(Q_(10, 'um/V'), Q_(7.6, 'um/V'))):
         self.x_limits_mag = tuple(float(val / Q_('1 V')) for val in limits[0])
         self.y_limits_mag = tuple(float(val / Q_('1 V')) for val in limits[1])
 
