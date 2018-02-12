@@ -75,7 +75,7 @@ class ITC4020(MessageBasedDriver):
 
     @ld_current.setter
     def ld_current(self, value):
-        inst.write('SOUR:CURR {:.5f}'.format(value))
+        self.write('SOUR:CURR {:.5f}'.format(value))
 
     @DictFeat(units='W', keys={'photodiode', 'pd', 'thermopile', 'tp', 'power meter'})
     def ld_power(self, method):
@@ -103,52 +103,21 @@ class ITC4020(MessageBasedDriver):
     def ld_state(self, value):
         self.write('OUTP1:STAT {}'.format(value))
 
+    @Feat(values={False: '0', True: '1'})
+    def am_state(self):
+        return self.query(':AM:STAT?')
 
+    @am_state.setter
+    def am_state(self, value):
+        self.write(':AM:STAT {}'.format(value))
 
+    @Feat(values={'Internal', 'External'})
+    def am_source(self):
+        return self.query(':AM:SOUR?')
 
-    # @Action()
-    # def turn_on_seq(self, temp_error=0.05, current_error=0.005):
-    #     if self.output_state:
-    #         print("Laser is already ON!")
-    #         return
-
-    #     #Turn ON sequence:
-    #     #   1. TEC ON
-    #     #   2. Wait for temperature == set_temperature
-    #     #   3. LD ON
-    #     #   4. Wait for current == set_current
-
-    #     # 1. TEC ON
-    #     self.write('OUTP2:STAT ON')
-
-    #     # 2. Wait
-    #     setpoint = self.temperature_setpoint
-    #     while(abs(setpoint-self.temperature)>temp_error):pass
-
-
-    #     # 3. LD ON
-    #     self.write('OUTP1:STAT ON')
-
-    #     # 4. Wait
-    #     setpoint = self.LD_current_setpoint
-    #     while(abs(setpoint-self.LD_current)>current_error):pass
-
-    # @Action()
-    # def turn_off_seq(self, current_error=0.005):
-    #     #Turn OFF sequence:
-    #     #   1. LD OFF
-    #     #   2. Wait for current == 0
-    #     #   3. TEC OFF
-
-    #     # 1. LD OFF
-    #     self.write('OUTP1:STAT OFF')
-
-    #     # 2. Wait
-    #     while(abs(self.LD_current)>current_error):pass
-
-    #     # 1. TEC OFF
-    #     self.write('OUTP2:STAT OFF')
-
+    @am_source.setter
+    def am_source(self, value):
+        self.write(':AM:SOUR {}'.format(value))
 
 
 if __name__ == '__main__':
