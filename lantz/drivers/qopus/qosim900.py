@@ -22,7 +22,7 @@ class QOSIM900(MessageBasedDriver):
             }
         }
 
-        AMP_CHS = {0:5, 1:6, 2:7, 3:8}
+        AMP_CHS = {0:3, 1:4, 2:5, 3:6, 4:7, 5:8}
 
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
