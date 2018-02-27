@@ -22,66 +22,75 @@ class PH300(LibraryDriver):
         self.device_idx = device_idx
         return
 
+    def call(self, func_name, *args):
+        err = getattr(self.lib, func_name)(*args)
+        if not err:
+            return
+        else:
+            s = ctypes.create_string_buffer(50)
+            self.lib.GetErrorString(s,err)
+            raise Exception(s.value.decode('ascii'))
+
     def initialize(self):
         serial = ctypes.create_string_buffer(8)
-        self.lib.OpenDevice(self.device_idx, serial)
-        self.lib.Initialize(self.device_idx, 2)
+        self.call('OpenDevice', self.device_idx, serial)
+        self.call('Initialize', self.device_idx, 2)
         features = ctypes.c_int()
-        self.lib.GetFeatures(self.device_idx, ctypes.byref(features))
+        self.call('GetFeatures', self.device_idx, ctypes.byref(features))
         return
 
     @DictFeat(keys=(0, 1))
     def count_rate(self, channel):
         rate = ctypes.c_int()
-        self.lib.GetCountRate(self.device_idx, channel, ctypes.byref(rate))
+        self.call('GetCountRate', self.device_idx, channel, ctypes.byref(rate))
         return rate.value
 
     @Feat()
     def resolution(self):
         resolution = ctypes.c_double(0.0)
-        self.lib.GetResolution(self.device_idx, ctypes.byref(resolution))
+        self.call('GetResolution', self.device_idx, ctypes.byref(resolution))
         return resolution.value
 
     @Action()
     def set_input_cfd(self, channel, level, zero_cross):
-        self.lib.SetInputCFD(self.device_idx, channel, level, zero_cross)
+        self.call('SetInputCFD', self.device_idx, channel, level, zero_cross)
         return
 
     @Action()
     def set_sync_div(self, sync_div):
-        self.lib.SetSyncDiv(self.device_idx, sync_div)
+        self.call('SetSyncDiv', self.device_idx, sync_div)
         return
 
     @Action()
     def set_binning(self, binning):
-        self.lib.SetBinning(self.device_idx, binning)
+        self.call('SetBinning', self.device_idx, binning)
         return
 
     @Action()
     def set_offset(self, offset):
-        self.lib.SetOffset(self.device_idx, offset)
+        self.call('SetOffset', self.device_idx, offset)
         return
 
     @Action(units=('ms'))
     def start_measurement(self, measurement_time):
-        self.lib.StartMeas(self.device_idx, int(measurement_time))
+        self.call('StartMeas', self.device_idx, int(measurement_time))
         return
 
     @Action()
     def stop_measurement(self):
-        self.lib.StopMeas(self.device_idx)
+        self.call('StopMeas', self.device_idx)
         return
 
     @Feat()
     def elapsed_measurement_time(self):
         elapsed = ctypes.c_double(0.0)
-        self.lib.GetElapsedMeasTime(self.device_idx, ctypes.byref(elapsed))
+        self.call('GetElapsedMeasTime', self.device_idx, ctypes.byref(elapsed))
         return elapsed.value
 
     @Feat()
     def flags(self):
         flags = ctypes.c_uint()
-        self.lib.GetFlags(self.device_idx, ctypes.byref(flags))
+        self.call('GetFlags', self.device_idx, ctypes.byref(flags))
         return flags.value
 
     @Action()
@@ -136,5 +145,5 @@ class PH300(LibraryDriver):
         return c1, c2
 
     def finalize(self):
-        self.lib.CloseDevice(self.device_idx)
+        self.call('CloseDevice', self.device_idx)
         return
