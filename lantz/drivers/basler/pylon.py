@@ -9,7 +9,9 @@
     - pylon https://www.baslerweb.com/en/support/downloads/software-downloads/
 
     Log:
-    Tried to implement PyPylon, but did not compile with python 3.5
+    - Dynamically add available feats
+    - Collect single and multiple images
+    - Set Gain and exposure time
     - PyPylon https://github.com/dihm/PyPylon (tested with version:
                         f5b5f8dfb179af6c23340fe81a10bb75f2f467f7)
 
@@ -20,8 +22,8 @@
     TODO:
     - 12 bit packet readout
     - Bandwith control
-    - Dynamically add available feats
     - Dynamically set available values for feats
+    - Set ROI
 """
 
 from lantz.driver import Driver
@@ -32,6 +34,13 @@ import pypylon
 import numpy as np
 
 
+beginner_controls = ['ExposureTimeAbs', 'GainRaw', 'Width', 'Height',
+                     'OffsetX', 'OffsetY']
+property_units = {'ExposureTimeAbs': 'us', }
+aliases = {'exposure_time': 'ExposureTimeAbs',
+           'gain': 'GainRaw',
+          }
+
 def todict(listitems):
     'Helper function to create dicts usable in feats'
     d = {}
@@ -39,14 +48,38 @@ def todict(listitems):
         d.update({item:item})
     return d
 
+def attach_dyn_propr(instance, prop_name, propr):
+    """Attach property proper to instance with name prop_name.
+
+    Reference: 
+    * https://stackoverflow.com/a/1355444/509706
+    * https://stackoverflow.com/questions/48448074
+    """
+    class_name = instance.__class__.__name__ + 'C'
+    child_class = type(class_name, (instance.__class__,), {prop_name: propr})
+
+    instance.__class__ = child_class
+
+def create_getter(p):
+    def tmpfunc(self):
+        return self.cam.properties[p]
+    return tmpfunc
+
+def create_setter(p):
+    def tmpfunc(self, val):
+        self.cam.properties[p] = val
+    return tmpfunc
+
+
 class Cam(Driver):
     # LIBRARY_NAME = '/opt/pylon5/lib64/libpylonc.so'
 
-    def __init__(self, camera=0,
+    def __init__(self, camera=0, level='beginner',
                  *args, **kwargs):
         """
         @params
         :type camera_num: int, The camera device index: 0,1,..
+        :type level: str, Level of controls to show ['beginner', 'expert']
 
         Example:
         import lantz
@@ -76,6 +109,7 @@ class Cam(Driver):
         """
         super().__init__(*args, **kwargs)
         self.camera = camera
+        self.level = level
 
     def initialize(self):
         '''
@@ -102,9 +136,12 @@ class Cam(Driver):
             raise RuntimeError(err)
 
         self.camera = cam.friendly_name
-        
+
         # First Open camera before anything is accessable
         self.cam.open()
+
+        self._dynamically_add_properties()
+        self._aliases()
 
         # get rid of Mono12Packed and give a log error:
         fmt = self.pixel_format
@@ -119,26 +156,47 @@ class Cam(Driver):
         self.cam.close()
         return
 
+    def _dynamically_add_properties(self):
+        '''Add all properties available on driver as Feats'''
+        # What about units?
+        props = self.properties.keys() if self.level == 'expert' else beginner_controls
+        for p in props:
+            feat = Feat(fget=create_getter(p),
+                        fset=create_setter(p),
+                        doc=self.cam.properties.get_description(p),
+                        units=property_units.get(p, None),
+                        )
+            feat.name = p
+            attach_dyn_propr(self, p, feat)
+
+    def _aliases(self):
+        """Add easy to use aliases to strange internal pylon names
+
+        Note that in the Logs, the original is renamed to the alias"""
+        for alias, orig in aliases.items():
+            attach_dyn_propr(self, alias, self.feats[orig].feat)
+
+
     @Feat()
     def info(self):
         # We can still get information of the camera back
         return 'Camera info of camera object:', self.cam.device_info
 
-    @Feat(units='us')
-    def exposure_time(self):
-        return self.cam.properties['ExposureTimeAbs']
-
-    @exposure_time.setter
-    def exposure_time(self, time):
-        self.cam.properties['ExposureTimeAbs'] = time
-
-    @Feat()
-    def gain(self):
-        return self.cam.properties['GainRaw']
-
-    @gain.setter
-    def gain(self, value):
-        self.cam.properties['GainRaw'] = value
+#    @Feat(units='us')
+#    def exposure_time(self):
+#        return self.cam.properties['ExposureTimeAbs']
+#
+#    @exposure_time.setter
+#    def exposure_time(self, time):
+#        self.cam.properties['ExposureTimeAbs'] = time
+#
+#    @Feat()
+#    def gain(self):
+#        return self.cam.properties['GainRaw']
+#
+#    @gain.setter
+#    def gain(self, value):
+#        self.cam.properties['GainRaw'] = value
 
     @Feat(values=todict(['Mono8','Mono12','Mono12Packed']))
     def pixel_format(self):
@@ -153,7 +211,7 @@ class Cam(Driver):
             self.log_error('PixelFormat {} not supported. Using Mono12 instead'.format(value))
             value = 'Mono12'
         self.cam.properties['PixelFormat'] = value
-    
+
     @Feat()
     def properties(self):
         'Dict with all properties supported by pylon dll driver'
