@@ -124,7 +124,7 @@ class Cam(Driver):
         # We can still get information of the camera back
         return 'Camera info of camera object:', self.cam.device_info
 
-    @Feat(units=['us'])
+    @Feat(units='us')
     def exposure_time(self):
         return self.cam.properties['ExposureTimeAbs']
 
