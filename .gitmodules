@@ -1,0 +1,3 @@
+[submodule "lantz/drivers/newport_esp"]
+	path = lantz/drivers/newport_motion
+	url = git@github.com:vascotenner/lantz_driver_newport_esp301.git
