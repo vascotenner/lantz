@@ -31,7 +31,8 @@ from lantz.driver import Driver
 from lantz import Feat, DictFeat, Action
 # import ctypes as ct
 import pypylon
-import numpy as np
+# import numpy as np
+import threading
 
 
 beginner_controls = ['ExposureTimeAbs', 'GainRaw', 'Width', 'Height',
@@ -41,17 +42,19 @@ aliases = {'exposure_time': 'ExposureTimeAbs',
            'gain': 'GainRaw',
           }
 
+
 def todict(listitems):
     'Helper function to create dicts usable in feats'
     d = {}
     for item in listitems:
-        d.update({item:item})
+        d.update({item: item})
     return d
+
 
 def attach_dyn_propr(instance, prop_name, propr):
     """Attach property proper to instance with name prop_name.
 
-    Reference: 
+    Reference:
     * https://stackoverflow.com/a/1355444/509706
     * https://stackoverflow.com/questions/48448074
     """
@@ -60,10 +63,12 @@ def attach_dyn_propr(instance, prop_name, propr):
 
     instance.__class__ = child_class
 
+
 def create_getter(p):
     def tmpfunc(self):
         return self.cam.properties[p]
     return tmpfunc
+
 
 def create_setter(p):
     def tmpfunc(self, val):
@@ -110,6 +115,8 @@ class Cam(Driver):
         super().__init__(*args, **kwargs)
         self.camera = camera
         self.level = level
+        # Some actions cannot be performed while reading
+        self._grabbing_lock = threading.RLock()
 
     def initialize(self):
         '''
@@ -126,10 +133,12 @@ class Cam(Driver):
                 self.cam = pypylon.factory.create_device(cam)
             else:
                 try:
-                    cam = [c for c in cameras if c.friendly_name == self.camera][0]
+                    cam = [c for c in cameras
+                           if c.friendly_name == self.camera][0]
                     self.cam = pypylon.factory.create_device(cam)
                 except IndexError:
-                    self.log_error('Camera {} not found in cameras: {}'.format(self.camera, cameras))
+                    self.log_error('Camera {} not found in cameras: {}'
+                                   ''.format(self.camera, cameras))
                     return
         except RuntimeError as err:
             self.log_error(err)
@@ -146,7 +155,8 @@ class Cam(Driver):
         # get rid of Mono12Packed and give a log error:
         fmt = self.pixel_format
         if fmt == str('Mono12Packed'):
-            self.log_error('PixelFormat {} not supported. Using Mono12 instead'.format(fmt))
+            self.log_error('PixelFormat {} not supported. Using Mono12 '
+                           'instead'.format(fmt))
             self.pixel_format = 'Mono12'
 
         # Go to full available speed
@@ -176,7 +186,6 @@ class Cam(Driver):
         for alias, orig in aliases.items():
             attach_dyn_propr(self, alias, self.feats[orig].feat)
 
-
     @Feat()
     def info(self):
         # We can still get information of the camera back
@@ -198,17 +207,19 @@ class Cam(Driver):
 #    def gain(self, value):
 #        self.cam.properties['GainRaw'] = value
 
-    @Feat(values=todict(['Mono8','Mono12','Mono12Packed']))
+    @Feat(values=todict(['Mono8', 'Mono12', 'Mono12Packed']))
     def pixel_format(self):
         fmt = self.cam.properties['PixelFormat']
         if fmt == 'Mono12Packed':
-            self.log_error('PixelFormat {} not supported. Use Mono12 instead'.format(fmt))
+            self.log_error('PixelFormat {} not supported. Use Mono12 instead'
+                           ''.format(fmt))
         return fmt
 
     @pixel_format.setter
     def pixel_format(self, value):
         if value == 'Mono12Packed':
-            self.log_error('PixelFormat {} not supported. Using Mono12 instead'.format(value))
+            self.log_error('PixelFormat {} not supported. Using Mono12 '
+                           'instead'.format(value))
             value = 'Mono12'
         self.cam.properties['PixelFormat'] = value
 
@@ -216,7 +227,7 @@ class Cam(Driver):
     def properties(self):
         'Dict with all properties supported by pylon dll driver'
         return self.cam.properties
-    
+
     @Action()
     def list_properties(self):
         'List all properties and their values'
@@ -226,8 +237,8 @@ class Cam(Driver):
             except IOError:
                 value = '<NOT READABLE>'
 
-            print('{0} ({1}):\t{2}'.format(key,
-                            self.cam.properties.get_description(key), value))
+            description = self.cam.properties.get_description(key)
+            print('{0} ({1}):\t{2}'.format(key, description, value))
 
     @Action(log_output=False)
     def grab_image(self):
@@ -235,4 +246,140 @@ class Cam(Driver):
 
     @Action(log_output=False)
     def grab_images(self, num=1):
-        return self.cam.grab_images(num)
+        with self._grabbing_lock:
+            img = self.cam.grab_images(num)
+        return img
+
+    @Action()
+    def set_roi(self, height, width, yoffset, xoffset):
+        # Validation:
+        if width+xoffset > self.properties['WidthMax']:
+            self.log_error('Not setting ROI:  Width + xoffset = {} exceeding '
+                           'max width of camera {}.'.format(width+xoffset,
+                                                self.properties['WidthMax']))
+            return
+        if height+yoffset > self.properties['HeightMax']:
+            self.log_error('Not setting ROI: Height + yoffset = {} exceeding '
+                           'max height of camera {}.'.format(height+yoffset,
+                                                self.properties['HeightMax']))
+            return
+
+        # Offset should be multiple of 2:
+        xoffset -= xoffset % 2
+        yoffset -= yoffset % 2
+
+        if height < 16:
+            self.log_error('Height {} too small, smaller than 16. Adjusting '
+                           'to 16'.format(height))
+            height = 16
+        if width < 16:
+            self.log_error('Width {} too small, smaller than 16. Adjusting '
+                           'to 16'.format(width))
+            width = 16
+
+        with self._grabbing_lock:
+            # Order matters!
+            if self.OffsetY > yoffset:
+                self.OffsetY = yoffset
+                self.Height = height
+            else:
+                self.Height = height
+                self.OffsetY = yoffset
+            if self.OffsetX > xoffset:
+                self.OffsetX = xoffset
+                self.Width = width
+            else:
+                self.Width = width
+                self.OffsetX = xoffset
+
+    @Action()
+    def reset_roi(self):
+        '''Sets ROI to maximum camera size'''
+        self.set_roi(self.properties['HeightMax'],
+                     self.properties['WidthMax'],
+                     0,
+                     0)
+
+    # Helperfunctions for ROI settings
+    def limit_width(self, dx):
+        if dx > self.properties['WidthMax']:
+            dx = self.properties['WidthMax']
+        elif dx < 16:
+            dx = 16
+        return dx
+
+    def limit_height(self, dy):
+        if dy > self.properties['HeightMax']:
+            dy = self.properties['HeightMax']
+        elif dy < 16:
+            dy = 16
+        return dy
+
+    def limit_xoffset(self, xoffset, dx):
+        if xoffset < 0:
+            xoffset = 0
+        if xoffset + dx > self.properties['WidthMax']:
+            xoffset = self.properties['WidthMax'] - dx
+        return xoffset
+
+    def limit_yoffset(self, yoffset, dy):
+        if yoffset < 0:
+            yoffset = 0
+        if yoffset + dy > self.properties['HeightMax']:
+            yoffset = self.properties['HeightMax'] - dy
+        return yoffset
+
+    @Action()
+    def calc_roi(self, center=None, size=None, coords=None):
+        '''Calculate the left bottom corner and the width and height
+        of a box with center (x,y) and size x [(x,y)]. Respects device
+        size'''
+        if center and size:
+            y, x = center
+            try:
+                dy, dx = size
+            except (TypeError):
+                dx = dy = size
+
+            # Make sizes never exceed camera sizes
+            dx = self.limit_width(dx)
+            dy = self.limit_width(dy)
+
+            xoffset = x - dx // 2
+            yoffset = y - dy // 2
+
+            xoffset = self.limit_xoffset(xoffset, dx)
+            yoffset = self.limit_yoffset(yoffset, dy)
+
+            return dy, dx, yoffset, xoffset
+
+        elif coords:
+            xoffset = int(coords[1][0])
+            dx = int(coords[1][1] - xoffset)
+
+            yoffset = int(coords[0][0])
+            dy = int(coords[0][1] - yoffset)
+
+            # print(dy,dx)
+            dx = self.limit_width(dx)
+            dy = self.limit_height(dy)
+
+            # print(yoffset, xoffset)
+            xoffset = self.limit_xoffset(xoffset, dx)
+            yoffset = self.limit_yoffset(yoffset, dy)
+
+            return dy, dx, yoffset, xoffset
+
+        else:
+            raise ValueError('center&size or coords should be supplied')
+
+    def calc_roi_from_rel_coords(self, relcoords):
+        '''Calculate the new ROI from coordinates relative to the current
+        viewport'''
+
+        coords = ((self.OffsetX + relcoords[0][0],
+                   self.OffsetX + relcoords[0][1]),
+                  (self.OffsetY + relcoords[1][0],
+                   self.OffsetY + relcoords[1][1]))
+        # print('Rel_coords says new coords are', coords)
+        return self.calc_roi(coords=coords)
