@@ -1,11 +1,15 @@
 import numpy as np
-import clr
 from time import sleep
 
+import clr
+import sys
+import os
+
 # Import DLLs for running spectrometer via LightField
-automation_path = 'C:\Program Files\Princeton Instruments\LightField\PrincetonInstruments.LightField.AutomationV4.dll'
-addin_path = 'C:\Program Files\Princeton Instruments\LightField\AddInViews\PrincetonInstruments.LightFieldViewV4.dll'
-support_path = 'C:\Program Files\Princeton Instruments\LightField\PrincetonInstruments.LightFieldAddInSupportServices.dll'
+lf_root = os.environ['LIGHTFIELD_ROOT']
+automation_path = lf_root + '\PrincetonInstruments.LightField.AutomationV4.dll'
+addin_path = lf_root + '\AddInViews\PrincetonInstruments.LightFieldViewV4.dll'
+support_path = lf_root + '\PrincetonInstruments.LightFieldAddInSupportServices.dll'
 
 addin_class = clr.AddReference(addin_path);
 automation_class = clr.AddReference(automation_path);
@@ -106,15 +110,6 @@ class LightFieldM:
     def load_experiment(self, value):
         self.experiment.Load(value)
 
-    # def set_exposure(self, value):
-    #     self.set(lf.AddIns.CameraSettings.ShutterTimingExposureTime, value)
-    #     print('set exposure')
-    #
-    # def set_frames(self, num_frames):
-    #     self.set(lf.AddIns.ExperimentSettings.FrameSettingsFramesToStore, num_frames)
-    #     print('set frames')
-
-
     def acquire(self):
         """
         Helper function to acquire the data from the PIXIS-style cameras.
@@ -148,7 +143,7 @@ class LightFieldM:
             if image_set.Frames == 1:
 
                 frame = image_set.GetFrame(0, 0)
-                data = np.reshape(np.fromiter(frame.GetData(),'uint16'), [frame.Width, frame.Height])
+                data = np.reshape(np.fromiter(frame.GetData(),'uint16'), [frame.Width, frame.Height], order='F')
 
             else:
                 data = np.array([])
@@ -157,7 +152,7 @@ class LightFieldM:
                     frame = image_set.GetFrame(0, i)
                     new_frame = np.fromiter(frame.GetData(), 'uint16')
 
-                    new_frame = np.reshape(np.fromiter(frame.GetData(), 'uint16'), [frame.Width, frame.Height])
+                    new_frame = np.reshape(np.fromiter(frame.GetData(), 'uint16'), [frame.Width, frame.Height], order='F')
                     data = np.dstack((data, new_frame)) if data.size else new_frame
 
 
@@ -188,23 +183,31 @@ class LightFieldM:
         #
         #         data[j+1] = buf
 
+    def close(self):
+        """
+        """
+        self.automation.Dispose()
+        print('Closed AddInProcess.exe')
+
 
 class Spectrometer(Driver):
+
+    GRATINGS = ['[500nm,600][0][0]','[1.2um,300][1][0]','[500nm,150][2][0]']# TODO: make it pull gratings from SW directly
 
     def initialize(self):
         """
         Sets up LightField
         """
         self.lfm = LightFieldM(True)
-        self.lfm.load_experiment('LightfieldAutomationTest')
+        self.lfm.load_experiment('SpyreAutomation')
 
     def finalize(self):
         """
         Shuts the club downnnnn.
         """
-        print('club close at 3!')
+        self.lfm.close()
 
-    @Feat()
+    @Feat(units='nm')
     def center_wavelength(self):
         """
         Returns the center wavelength in nanometers.
@@ -247,7 +250,27 @@ class Spectrometer(Driver):
         """
         Sets the current grating to be the one specified by parameter grating.
         """
+        # TODO: figure out the format for setting this
+
         print('figure out the format for this')
+
+    @Feat()
+    def gratings(self):
+        """
+        Returns a list of all installed gratings.
+        """
+        break_down = False
+
+        if break_down:
+
+            import re
+
+            for g in GRATINGS:
+
+                match = re.search(r"\[(\d+\.?\d+[nu]m),(\d+)\]\[(\d+)\]\[(\d+)\])",g)
+                blaze, g_per_mm, slot, turret = match.groups()
+
+        return GRATINGS
 
     @Feat()
     def num_frames(self):
@@ -355,6 +378,8 @@ class Spectrometer(Driver):
         """
         Acquires a background file and sets it to be used in the current scan.
         """
+        # TODO: take background file, and save it in a location where it be accessed later
+
         print('not yet implemented')
 
 
@@ -416,7 +441,7 @@ def test():
     #import matplotlib.pyplot as plt
 
     lfm = LightFieldM(True)
-    lfm.load_experiment('LightfieldAutomationTest')
+    lfm.load_experiment('SpyreAutomation')
 
     lfm.set_frames(5)
     print(lfm.get(lf.AddIns.ExperimentSettings.FrameSettingsFramesToStore))
