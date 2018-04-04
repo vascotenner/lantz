@@ -377,9 +377,9 @@ class Cam(Driver):
         '''Calculate the new ROI from coordinates relative to the current
         viewport'''
 
-        coords = ((self.OffsetX + relcoords[0][0],
-                   self.OffsetX + relcoords[0][1]),
-                  (self.OffsetY + relcoords[1][0],
-                   self.OffsetY + relcoords[1][1]))
+        coords = ((self.OffsetY + relcoords[0][0],
+                   self.OffsetY + relcoords[0][1]),
+                  (self.OffsetX + relcoords[1][0],
+                   self.OffsetX + relcoords[1][1]))
         # print('Rel_coords says new coords are', coords)
         return self.calc_roi(coords=coords)
