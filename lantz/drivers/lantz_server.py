@@ -19,6 +19,7 @@ from lantz import Driver, Q_, Feat, DictFeat, Action
 import socket
 import time
 import sys
+from importlib import import_module
 
 def encode_data(data, protocol=None):
     data = pickle.dumps(data, protocol=protocol)
@@ -120,7 +121,7 @@ class Lantz_Server(socketserver.TCPServer):
 
         super().__init__((host, port), Lantz_Handler)
 
-class Lantz_Client(Driver):
+class Lantz_Base_Client(Driver):
     def __init__(self, host, port, timeout=1):
         self.host = host
         self.port = port
@@ -137,48 +138,58 @@ class Lantz_Client(Driver):
         return receive_all(sock.recv, self.timeout)
 
 
-def build_client_driver(device_driver_class, host, port, timeout=1):
-    class Device_Client(Lantz_Client):
-        def __init__(self, device_driver_class, host, port, timeout=1):
-            super().__init__(host=host, port=port, timeout=timeout)
-            for feat_name, feat in device_driver_class._lantz_features.items():
-                if isinstance(feat, Feat):
-                    def get_fun(_feat_name):
-                        def f_(_self):
-                            reply = _self.query(build_query('Feat', _feat_name, query_type='GET'))
-                            if not reply['error'] is None:
-                                raise reply['error']
-                            else:
-                                return reply['msg']
-                        return f_
+class Device_Client():
+    def __new__(cls, device_driver_class, host, port, timeout=1):
+        
+        if type(device_driver_class) is str:
+            class_name = device_driver_class.split('.')[-1]
+            mod = import_module(device_driver_class.replace('.'+class_name, ''))
+            device_driver_class = getattr(mod, class_name)
+        
+        class Device_Client_Instance(Lantz_Base_Client):
+            __name__ = '_Device_Client.' + device_driver_class.__name__
+            __qualname__ = 'Device_Client.' + device_driver_class.__name__ 
 
-                    def set_fun(_feat_name):
-                        def f_(_self, val):
-                            reply = _self.query(build_query('Feat', _feat_name, query_type='SET', val=val))
-                            if not reply['error'] is None:
-                                raise reply['error']
-                            else:
-                                return reply['msg']
-                        return f_  
-                    setattr(Device_Client, feat_name, property(get_fun(feat_name), set_fun(feat_name)))
-                #TODO implement DictFeat
-                else:
-                    continue
-            for action_name, action in device_driver_class._lantz_actions.items():
-                def execute(_action_name):
-                    def f_(_self, *args, **kwargs):
-                        print(_action_name)
-                        print(args)
-                        print(kwargs)
-                        reply = _self.query(build_query('Action', _action_name, args=args, kwargs=kwargs))
+        for feat_name, feat in device_driver_class._lantz_features.items():
+            if isinstance(feat, Feat):
+                def get_fun(_feat_name):
+                    def f_(_self):
+                        reply = _self.query(build_query('Feat', _feat_name, query_type='GET'))
                         if not reply['error'] is None:
                             raise reply['error']
                         else:
                             return reply['msg']
                     return f_
-                setattr(Device_Client, action_name, execute(action_name))
+
+                def set_fun(_feat_name):
+                    def f_(_self, val):
+                        reply = _self.query(build_query('Feat', _feat_name, query_type='SET', val=val))
+                        if not reply['error'] is None:
+                            raise reply['error']
+                        else:
+                            return reply['msg']
+                    return f_  
+                setattr(Device_Client_Instance, feat_name, property(get_fun(feat_name), set_fun(feat_name)))
+            #TODO implement DictFeat
+            else:
+                continue
+        for action_name, action in device_driver_class._lantz_actions.items():
+            def execute(_action_name):
+                def f_(_self, *args, **kwargs):
+                    print(_action_name)
+                    print(args)
+                    print(kwargs)
+                    reply = _self.query(build_query('Action', _action_name, args=args, kwargs=kwargs))
+                    if not reply['error'] is None:
+                        raise reply['error']
+                    else:
+                        return reply['msg']
+                return f_
+            setattr(Device_Client_Instance, action_name, execute(action_name))
                     
-    return Device_Client(device_driver_class, host, port, timeout=timeout)
+        obj = Device_Client_Instance.__new__(Device_Client_Instance)
+        obj.__init__(host, port, timeout=timeout)
+        return obj
 
 if __name__ == "__main__":
     HOST, PORT = "localhost", 9999
