@@ -17,5 +17,6 @@
 from .powermeter1830c import PowerMeter1830c
 from .agilis import Agilis
 from .xpsq8 import XPSQ8
+from .fsm300 import FSM300
 
-__all__ = ['PowerMeter1830c', 'Agilis', 'XPSQ8']
+__all__ = ['PowerMeter1830c', 'Agilis', 'XPSQ8', 'FSM300']

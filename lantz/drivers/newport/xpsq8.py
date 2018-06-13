@@ -45,7 +45,7 @@ class XPSQ8(Driver):
     def home(self, channel):
         retval = self._xps.GroupHomeSearch(self._socket_id, channel)
 
-    @DictFeat()
+    @DictFeat(units='mm')
     def abs_position(self, channel):
         retval = self._xps.GroupPositionCurrentGet(self._socket_id, channel, 1)
         error, curpos = retval

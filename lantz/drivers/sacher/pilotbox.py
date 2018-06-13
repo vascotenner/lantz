@@ -66,6 +66,58 @@ class PilotBox(MessageBasedDriver):
     def laser_status(self, status):
         self.write(':Laser:STATus {}'.format(status))
 
+    @Feat(read_once=True)
+    def piezo_mod(self):
+        return self.query(':Piezo:FREQuency:GENerator ?')
+
+    @Feat(read_once=True)
+    def piezo_amp(self):
+        return self.query(':Piezo:FREQuency:ampl ?')
+
+    @Feat(read_once=True, values={False:'OFF', True:'ON'})
+    def piezo_status(self):
+        return self.query(':Piezo:ENAble ?')
+
+    @Feat(read_once=True)
+    def piezo_offset(self):
+        return self.query(':Piezo:OFFset ?')
+
+    @Feat(read_once=True)
+    def piezo_freq(self):
+        return self.query(':Piezo:FREQuency ?')
+
+    @piezo_freq.setter
+    def piezo_freq(self,freq):
+        self.write(':Piezo:FREQuency {}'.format(freq))
+
+    @piezo_offset.setter
+    def piezo_offset(self,offset):
+        self.write(':Piezo:OFFset {}V'.format(offset))
+
+    @piezo_status.setter
+    def piezo_status(self,status,values={False:'OFF', True:'ON'}):
+        self.write(':Piezo:ENAble: {}')
+
+
+    @piezo_amp.setter
+    def piezo_amp(self,ampl):
+        self.write(':Piezo:FREQuency:ampl {}V'.format(ampl))
+
+    @piezo_mod.setter
+    def piezo_mod(self,mod):
+        self.write(':Piezo:FREQuency:GENerator {}'.format(mod))
+        #off, sin, tri
+
+    @Feat(read_once=True)
+    def current_lim(self):
+        return self.query(':Laser:ILIMit? MAX')
+
+    @current_lim.setter
+    def current_lim(self,currentlim):
+        self.write(':Laser:ILIMit {}A'.format(currentlim))
+
+
+
 
 import time
 if __name__ == '__main__':
@@ -80,32 +132,8 @@ if __name__ == '__main__':
         #pbox.laser_mode = 'Current'
         #print(pbox.laser_mode)
         #print(pbox.current_meas)
-
-        #time.sleep(7)
-        pbox.current_set = 0.3435
-
-
-        # print('ok')
-        # time.sleep(3)
-        # pbox.current_set = 0.1900
-        # print('ok')
-        # time.sleep(3)
-        # pbox.current_set = 0.1950
-        # print('ok')
-        # time.sleep(3)
-        # pbox.current_set = 0.2000
-        # print('ok')
-        # time.sleep(3)
-        # pbox.current_set = 0.2050
-        # print('ok')
-        # time.sleep(3)
-        # pbox.current_set = 0.2100
-
-
-
         #print(pbox.current_set)
         #print(pbox.current_meas)
-        print('')
         #print(pbox.laser_status)
         #pbox.laser_status = 'ON'
         #time.sleep(5)

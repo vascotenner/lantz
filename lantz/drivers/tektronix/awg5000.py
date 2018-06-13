@@ -25,6 +25,8 @@ class AWGState(Enum):
     running = 2
 
 
+_ch_markers = [(ch, m) for ch in range(1, 5) for m in range(1, 3)]
+
 class AWG5000(MessageBasedDriver):
 
     DEFAULTS = {
@@ -84,6 +86,50 @@ class AWG5000(MessageBasedDriver):
     def toggle_all_outputs(self, state):
         for channel in range(1, 5):
             self.toggle_output[channel] = state
+
+    @DictFeat(units='V', keys=_ch_markers)
+    def marker_amplitude(self, ch_m):
+        ch, m = ch_m
+        return float(self.query('SOUR{}:MARK{}:VOLT:AMPL?'.format(ch, m)))
+
+    @marker_amplitude.setter
+    def marker_amplitude(self, ch_m, value):
+        ch, m = ch_m
+        self.write('SOUR{}:MARK{}:VOLT:AMPL {}V'.format(ch, m, value))
+        return
+
+    @DictFeat(units='V', keys=_ch_markers)
+    def marker_high(self, ch_m):
+        ch, m = ch_m
+        return float(self.query('SOUR{}:MARK{}:VOLT:HIGH?'.format(ch, m)))
+
+    @marker_high.setter
+    def marker_high(self, ch_m, value):
+        ch, m = ch_m
+        self.write('SOUR{}:MARK{}:VOLT:HIGH {}V'.format(ch, m, value))
+        return
+
+    @DictFeat(units='V', keys=_ch_markers)
+    def marker_low(self, ch_m):
+        ch, m = ch_m
+        return float(self.query('SOUR{}:MARK{}:VOLT:LOW?'.format(ch, m)))
+
+    @marker_low.setter
+    def marker_low(self, ch_m, value):
+        ch, m = ch_m
+        self.write('SOUR{}:MARK{}:VOLT:LOW {}V'.format(ch, m, value))
+        return
+
+    @DictFeat(units='V', keys=_ch_markers)
+    def marker_offset(self, ch_m):
+        ch, m = ch_m
+        return float(self.query('SOUR{}:MARK{}:VOLT:OFFS?'.format(ch, m)))
+
+    @marker_offset.setter
+    def marker_offset(self, ch_m, value):
+        ch, m = ch_m
+        self.write('SOUR{}:MARK{}:VOLT:OFFS {}V'.format(ch, m, value))
+        return
 
     @DictFeat(limits=(1, 2 ** 16))
     def seq_loop_count(self, line):

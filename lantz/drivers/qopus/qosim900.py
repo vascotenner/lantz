@@ -22,7 +22,8 @@ class QOSIM900(MessageBasedDriver):
             }
         }
 
-        AMP_CHS = {0:5, 1:6, 2:7, 3:8}
+        AMP_CHS = {0:3, 1:4, 2:5, 3:6, 4:7, 5:8}
+        SIM922_ch = 1
 
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
@@ -36,12 +37,16 @@ class QOSIM900(MessageBasedDriver):
         def read_to_card(self, channel):
             n = int(self.query('NINP? {}'.format(channel)))
             ans = self.query("RAWN? {}, {}".format(channel, n))
-            return ans
+            return ans.strip()
 
-        def query_to_card(self, channel, cmd):
+        def query_to_card(self, channel, cmd, delay=0.1):
             self.write_to_card(channel, cmd)
-            _t.sleep(0.1)
+            _t.sleep(delay)
             return self.read_to_card(channel)
+
+        @DictFeat(units='K', keys=[1,2])
+        def temperature(self, ch):
+            return float(self.query_to_card(self.SIM922_ch, 'TVAL? {}'.format(ch), delay=0.5))
 
         @DictFeat(keys=list(AMP_CHS.keys()), limits=(0, 25e-6, 25e-6/65535), units='A')
         def bias_current(self, key):
