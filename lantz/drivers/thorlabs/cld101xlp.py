@@ -150,7 +150,8 @@ if __name__ == '__main__':
     log_to_screen(logging.CRITICAL)
     #res_name = sys.argv[1]
 
-    res_names = ['USB0::0x1313::0x804F::M00431386::INSTR', 'USB0::0x1313::0x804F::M00418508::INSTR']
+    res_names = ['USB0::0x1313::0x804F::SERIALNUMBER::INSTR', 'USB0::0x1313::0x804F::SERIALNUMBER::INSTR']
+    print('update res_names!')
 
     fmt_str = "{:<30}|{:>30}"
     on_time = 20
