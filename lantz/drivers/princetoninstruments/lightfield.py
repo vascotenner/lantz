@@ -1,28 +1,32 @@
 import numpy as np
 from time import sleep
 
-import clr
+
 import sys
 import os
 
-# Import DLLs for running spectrometer via LightField
-lf_root = os.environ['LIGHTFIELD_ROOT']
-automation_path = lf_root + '\PrincetonInstruments.LightField.AutomationV4.dll'
-addin_path = lf_root + '\AddInViews\PrincetonInstruments.LightFieldViewV4.dll'
-support_path = lf_root + '\PrincetonInstruments.LightFieldAddInSupportServices.dll'
+try:
+    import clr
+    # Import DLLs for running spectrometer via LightField
+    lf_root = os.environ['LIGHTFIELD_ROOT']
+    automation_path = lf_root + '\PrincetonInstruments.LightField.AutomationV4.dll'
+    addin_path = lf_root + '\AddInViews\PrincetonInstruments.LightFieldViewV4.dll'
+    support_path = lf_root + '\PrincetonInstruments.LightFieldAddInSupportServices.dll'
 
-addin_class = clr.AddReference(addin_path);
-automation_class = clr.AddReference(automation_path);
-support_class = clr.AddReference(support_path);
+    addin_class = clr.AddReference(addin_path);
+    automation_class = clr.AddReference(automation_path);
+    support_class = clr.AddReference(support_path);
 
-import PrincetonInstruments.LightField as lf
+    import PrincetonInstruments.LightField as lf
 
-# Import some system functions for interfacing with LightField code
-clr.AddReference("System.Collections")
-clr.AddReference("System.IO")
-from System.Collections.Generic import List
-from System import String
-from System.IO import FileAccess
+    # Import some system functions for interfacing with LightField code
+    clr.AddReference("System.Collections")
+    clr.AddReference("System.IO")
+    from System.Collections.Generic import List
+    from System import String
+    from System.IO import FileAccess
+except:
+    pass
 
 # Lantz imports
 from lantz import Driver, Feat, DictFeat, Action
