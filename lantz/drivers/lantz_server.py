@@ -135,12 +135,14 @@ class Lantz_Base_Client(Driver):
         sock.sendall(encode_data(data))
 
         #Read back ans from the server
-        return receive_all(sock.recv, self.timeout)
+        ans = receive_all(sock.recv, self.timeout)
+
+        sock.close()
+        return ans
 
 
 class Device_Client():
-    def __new__(cls, device_driver_class, host, port, timeout=1):
-        
+    def __new__(cls, device_driver_class, host, port, timeout=1, allow_initialize_finalize=True):
         if type(device_driver_class) is str:
             class_name = device_driver_class.split('.')[-1]
             mod = import_module(device_driver_class.replace('.'+class_name, ''))
@@ -148,7 +150,14 @@ class Device_Client():
         
         class Device_Client_Instance(Lantz_Base_Client):
             __name__ = '_Device_Client.' + device_driver_class.__name__
-            __qualname__ = 'Device_Client.' + device_driver_class.__name__ 
+            __qualname__ = 'Device_Client.' + device_driver_class.__name__
+            _allow_initialize_finalize = allow_initialize_finalize
+            def initialize(self):
+                if self._allow_initialize_finalize:
+                    self._initialize()
+            def finalize(self):
+                if self._allow_initialize_finalize:
+                    self._finalize()
 
         for feat_name, feat in device_driver_class._lantz_features.items():
             if isinstance(feat, Feat):
@@ -176,16 +185,18 @@ class Device_Client():
         for action_name, action in device_driver_class._lantz_actions.items():
             def execute(_action_name):
                 def f_(_self, *args, **kwargs):
-                    print(_action_name)
-                    print(args)
-                    print(kwargs)
                     reply = _self.query(build_query('Action', _action_name, args=args, kwargs=kwargs))
                     if not reply['error'] is None:
                         raise reply['error']
                     else:
                         return reply['msg']
                 return f_
-            setattr(Device_Client_Instance, action_name, execute(action_name))
+            if action_name in ['initialize', 'finalize']:
+                setattr(Device_Client_Instance, '_'+action_name, execute(action_name))
+            else:
+                setattr(Device_Client_Instance, action_name, execute(action_name))
+
+        
                     
         obj = Device_Client_Instance.__new__(Device_Client_Instance)
         obj.__init__(host, port, timeout=timeout)
