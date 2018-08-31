@@ -3,7 +3,7 @@ from lantz import Feat
 
 import urllib.request
 
-class VariableAttentuator(Driver):
+class VariableAttenuator(Driver):
     """
     This class is a driver for the Minicircuits RCDAT series of programmable
     attenuators. Note that at the time of this writing (9/9/2017), this was
