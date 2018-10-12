@@ -121,24 +121,24 @@ class Lantz_Server(socketserver.TCPServer):
 
         super().__init__((host, port), Lantz_Handler)
 
-class Lantz_Base_Client(Driver):
-    def __init__(self, host, port, timeout=1):
-        self.host = host
-        self.port = port
-        self.timeout = timeout
+# class Lantz_Base_Client(Driver):
+#     def __init__(self, host, port, timeout=1):
+#         self.host = host
+#         self.port = port
+#         self.timeout = timeout
                 
 
-    def query(self, data):
-        #Initialize and send query
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.connect((self.host, self.port))
-        sock.sendall(encode_data(data))
+#     def query(self, data):
+#         #Initialize and send query
+#         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+#         sock.connect((self.host, self.port))
+#         sock.sendall(encode_data(data))
 
-        #Read back ans from the server
-        ans = receive_all(sock.recv, self.timeout)
+#         #Read back ans from the server
+#         ans = receive_all(sock.recv, self.timeout)
 
-        sock.close()
-        return ans
+#         sock.close()
+#         return ans
 
 
 class Device_Client():
@@ -148,7 +148,7 @@ class Device_Client():
             mod = import_module(device_driver_class.replace('.'+class_name, ''))
             device_driver_class = getattr(mod, class_name)
         
-        class Device_Client_Instance(Lantz_Base_Client):
+        class Device_Client_Instance(device_driver_class):
             __name__ = '_Device_Client.' + device_driver_class.__name__
             __qualname__ = 'Device_Client.' + device_driver_class.__name__
             _allow_initialize_finalize = allow_initialize_finalize
@@ -158,6 +158,24 @@ class Device_Client():
             def finalize(self):
                 if self._allow_initialize_finalize:
                     self._finalize()
+
+            def __init__(self, host, port, timeout=1):
+                self.host = host
+                self.port = port
+                self.timeout = timeout
+                
+
+            def query(self, data):
+                #Initialize and send query
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.connect((self.host, self.port))
+                sock.sendall(encode_data(data))
+
+                #Read back ans from the server
+                ans = receive_all(sock.recv, self.timeout)
+
+                sock.close()
+                return ans
 
         for feat_name, feat in device_driver_class._lantz_features.items():
             if isinstance(feat, Feat):
