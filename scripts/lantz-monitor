@@ -444,15 +444,20 @@ class LantzMonitor(SocketListener):
         if record.levelno < self.level:
             return
         with self._lock:
-            queue = record.lantz_driver, record.lantz_name
-            if queue not in self.queues:
-                self.queues[queue] = InstrumentState()
-                self.retitle()
-            if len(self.queues) == 1:
-                for formatter in self.formatters:
-                    formatter.current = queue
-            self.queues[queue].handle(record)
-            self.handler.handle(record)
+            try:
+                queue = record.lantz_driver, record.lantz_name
+            except AttributeError:
+                #TODO
+                pass
+            else:
+                if queue not in self.queues:
+                    self.queues[queue] = InstrumentState()
+                    self.retitle()
+                if len(self.queues) == 1:
+                    for formatter in self.formatters:
+                        formatter.current = queue
+                self.queues[queue].handle(record)
+                self.handler.handle(record)
 
 
 if __name__ == '__main__':
