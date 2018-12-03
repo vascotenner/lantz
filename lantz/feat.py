@@ -12,6 +12,7 @@
 
 import time
 import copy
+import numpy as np
 from weakref import WeakKeyDictionary
 
 from . import Q_
@@ -87,6 +88,8 @@ class Feat(object):
                    changed but only tested to belong to the container.
     :param units: `Quantity` or string that can be interpreted as units.
     :param procs: Other callables to be applied to input arguments.
+    :precision: Only write to an instrument if the set value is more than one
+                precision away from last known value
 
     """
 
@@ -94,7 +97,7 @@ class Feat(object):
 
     def __init__(self, fget=MISSING, fset=None, doc=None, *,
                  values=None, units=None, limits=None, procs=None,
-                 read_once=False):
+                 read_once=False, precision=0):
         self.fget = fget
         self.fset = fset
         self.__doc__ = doc
@@ -119,7 +122,8 @@ class Feat(object):
         self.modifiers[MISSING] = {MISSING: {'values': values,
                                              'units': units,
                                              'limits': limits,
-                                             'processors': procs}}
+                                             'processors': procs,
+                                             'precision': precision}}
         self.get_processors[MISSING] = {MISSING: ()}
         self.set_processors[MISSING] = {MISSING: ()}
 
@@ -135,6 +139,7 @@ class Feat(object):
         units = modifiers['units']
         limits = modifiers['limits']
         processors = modifiers['processors']
+        precision = modifiers['precision']
 
         get_processors = []
         set_processors = []
@@ -155,6 +160,14 @@ class Feat(object):
                     get_processors.append(Processor(getp))
                 if setp is not None:
                     set_processors.append(Processor(setp))
+        if precision:
+            if isinstance(precision, str):
+                if not units:
+                    raise ValueError('Units have to be set for precision of '
+                                     'type {}', type(precision))
+                precision = ToQuantityProcessor(units)(precision)
+            if isinstance(precision, Q_):
+                precision = FromQuantityProcessor(units)(precision)
 
         if build_doc:
             _dochelper(self)
@@ -255,9 +268,11 @@ class Feat(object):
         # and timing, caching, logging and error handling
         with instance._lock:
             current_value = self.get_cache(instance, key)
-
-            if not force and value == current_value:
-                instance.log_info('No need to set {} = {} (current={}, force={})', name, value, current_value, force)
+            modifiers = _dget(self.modifiers, instance, key)
+            precision = modifiers['precision']
+            if not force and (current_value is MISSING or
+                              np.isclose(value, current_value, atol=precision)):
+                instance.log_info('No need to set {} = {} (current={}, force={}, precision={})', name, value, current_value, force, precision)
                 return
 
             instance.log_info('Setting {} = {} (current={}, force={})', name, value, current_value, force)

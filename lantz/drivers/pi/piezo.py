@@ -66,10 +66,9 @@ class Piezo(MessageBasedDriver):
 
     print('Available devices:', lantz.messagebased._resource_manager.list_resources())
     print('Connecting to: ASRL/dev/ttyUSB0::INSTR')
-    stage = pi.Piezo('ASRL/dev/ttyUSB0::INSTR')
+    stage = pi.Piezo('ASRL/dev/ttyUSB0::INSTR', axis='X',
+        sleeptime_after_move=10*ureg.ms)
     stage.initialize()
-    stage.sleeptime_after_move = 10*ureg.ms 
-    stage.axis = 'X'
     idn = stage.idn
 
     stage.servo = True
@@ -111,9 +110,12 @@ class Piezo(MessageBasedDriver):
                            'baud_rate': 57600,
                            'timeout': 20}, }
 
-    def initialize(self, axis='X', sleeptime_after_move=0*ureg.ms):
-        self.axis = axis
-        self.sleeptime_after_move = sleeptime_after_move
+    def __init__(self, *args, **kwargs):
+        self.sleeptime_after_move = kwargs.pop('sleeptime_after_move', 0*ureg.ms)
+        self.axis = kwargs.pop('axis', 'X')
+        super().__init__(*args, **kwargs)
+
+    def initialize(self):
         super().initialize()
 
     def finalize(self):
