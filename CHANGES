@@ -2,10 +2,11 @@ Lantz Changelog
 ===============
 
 
-0.4 (unreleased)
+0.3.1 (unreleased)
 ----------------
 
-- Nothing changed yet.
+- Added drivers: SR844 Lock-In
+- Support for PyQt5
 
 
 0.3 (2015-02-05)
