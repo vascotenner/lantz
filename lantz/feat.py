@@ -87,8 +87,13 @@ class Feat(object):
                    If a list/tuple instead of a dict is given, the value is not
                    changed but only tested to belong to the container.
     :param units: `Quantity` or string that can be interpreted as units.
+    :param limits: ([start,] stop[, step]) Define range in which value has to be.
+                   Including start and stop. If you provide a value outside the valid
+                   range, Lantz will raise a ValueError. If the steps parameter is set
+                   but you provide a value not compatible with it, it will be silently
+                   rounded.
     :param procs: Other callables to be applied to input arguments.
-    :precision: Only write to an instrument if the set value is more than one
+    :param precision: Only write to an instrument if the set value is more than one
                 precision away from last known value
 
     """
