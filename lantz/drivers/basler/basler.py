@@ -76,7 +76,7 @@ def create_setter(p):
     return tmpfunc
 
 
-class Cam(Driver):
+class BaslerCam(Driver):
     # LIBRARY_NAME = '/opt/pylon5/lib64/libpylonc.so'
 
     def __init__(self, camera=0, level='beginner',
@@ -110,7 +110,7 @@ class Cam(Driver):
             duration = (time.time()-start)*1000*lantz.Q_('ms')
             print('Read {} images in {}. Reading alone took {}. Framerate {}'.format(nr,
                 duration, duration - nr* cam.exposure_time, nr / duration.to('s')))
-                cam.finalize()
+        cam.finalize()
         """
         super().__init__(*args, **kwargs)
         self.camera = camera
@@ -242,7 +242,13 @@ class Cam(Driver):
 
     @Action(log_output=False)
     def grab_image(self):
+        """Read one single frame from camera"""
         return next(self.cam.grab_images(1))
+
+    @Action(log_output=False)
+    def getFrame(self):
+        """Deprecated: backwards compatibility"""
+        return self.grab_image()
 
     @Action(log_output=False)
     def grab_images(self, num=1):

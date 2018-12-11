@@ -13,7 +13,7 @@ class PhotonEtcComm():
     def __init__(self):
 
         # this should point to the location of the DLL
-        dll_loc = 'I:\\SDK 1.2.0 Installer\\win64\\PE_Filter_SDK.dll'
+        dll_loc = 'D:\\Code\\Github\\lantz\\lantz\\drivers\\photonetc\\PE_Filter_SDK.dll'
         self.config_dir = 'C:\\Program Files (x86)\\Photon etc\\PHySpecV2\\Devices\\'
 
 
@@ -274,7 +274,7 @@ class PhotonEtcFilter(Driver):
 
         handle = self.filters[filter_name]['handle']
 
-        min_nm, max_nm = self.wavelength_range['IR']
+        min_nm, max_nm = self.wavelength_range[filter_name]
 
         if min_nm <= nm <= max_nm:
 
