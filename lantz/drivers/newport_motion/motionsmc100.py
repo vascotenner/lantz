@@ -143,6 +143,15 @@ class SMC100(MessageBasedDriver, MotionControllerMultiAxis):
         self.detect_axis()
 
     @Action()
+    def clear_read_buffer(self):
+        '''Read all data that was still in the read buffer and discard this'''
+        try:
+            while True:
+                self.read()
+        except pyvisa.errors.VisaIOError:
+            pass  # readbuffer was empty already
+
+    @Action()
     def detect_axis(self):
         """ Find the number of axis available.
 
