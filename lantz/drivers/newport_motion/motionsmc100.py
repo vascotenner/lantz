@@ -22,10 +22,9 @@ from lantz import Q_, ureg
 from lantz.processors import convert_to
 from lantz.messagebased import MessageBasedDriver
 
-if __name__ == '__main__':
-    from motion import MotionController, MotionAxis
-else:
-    from .motion import MotionController, MotionAxis
+from lantz.drivers.newport_motion.motion import MotionAxis
+from lantz.drivers.motion import MotionControllerMultiAxis
+
 import time
 import numpy as np
 
@@ -80,7 +79,7 @@ controller_states = {
                     }
 
 
-class SMC100(MessageBasedDriver, MotionAxis):
+class SMC100(MessageBasedDriver, MotionControllerMultiAxis):
     """ Newport SMC100 motion controller. It assumes all axes to have units mm
 
 
