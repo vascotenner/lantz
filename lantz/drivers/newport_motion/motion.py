@@ -20,6 +20,7 @@ from lantz.messagebased import MessageBasedDriver
 from pyvisa import constants
 from lantz import Q_, ureg
 from lantz.processors import convert_to
+from lantz.drivers.motion import MotionAxisMultiple, MotionControllerMultiAxis, BacklashMixing
 import time
 import numpy as np
 
@@ -29,101 +30,28 @@ import numpy as np
 # ureg.define('motorstep = step')
 
 
-class MotionController(MessageBasedDriver):
+class MotionController():
     """ Newport motion controller. It assumes all axes to have units mm
 
     """
-
-    DEFAULTS = {
-                'COMMON': {'write_termination': '\r\n',
-                           'read_termination': '\r\n', },
-                'ASRL': {
-                    'timeout': 10,  # ms
-                    'encoding': 'ascii',
-                    'data_bits': 8,
-                    'baud_rate': 57600,
-                    'parity': constants.Parity.none,
-                    'stop_bits': constants.StopBits.one,
-                    'flow_control': constants.VI_ASRL_FLOW_RTS_CTS,
-                    },
-                }
-
-    def initialize(self):
-        super().initialize()
-
-    @Feat()
-    def idn(self):
-        raise AttributeError('Not implemented')
-        # return self.query('ID?')
-
-    @Action()
-    def detect_axis(self):
-        """ Find the number of axis available.
-
-        The detection stops as soon as an empty controller is found.
-        """
-        pass
-
-    @Action()
-    def get_errors(self):
-        raise AttributeError('Not implemented')
-
-    @Feat(read_once=False)
-    def position(self):
-        return [axis.position for axis in self.axes]
-
-    @Feat(read_once=False)
-    def _position_cached(self):
-        return [axis.recall('position') for axis in self.axes]
-
-    @position.setter
-    def position(self, pos):
-        """Move to position (x,y,...)"""
-        return self._position(pos)
-
-    @Action()
-    def _position(self, pos, read_pos=None, wait_until_done=True):
-        """Move to position (x,y,...)"""
-        if read_pos is not None:
-            self.log_error('kwargs read_pos for function _position is deprecated')
-
-        for p, axis in zip(pos, self.axes):
-            if p is not None:
-                axis._set_position(p, wait=False)
-        if wait_until_done:
-            for p, axis in zip(pos, self.axes):
-                if p is not None:
-                    axis._wait_until_done()
-                    axis.check_position(p)
-            return self.position
-
-        return pos
-
-    @Action()
-    def motion_done(self):
-        for axis in self.axes:
-            axis._wait_until_done()
-
-    def finalize(self):
-        for axis in self.axes:
-            if axis is not None:
-                del (axis)
-        super().finalize()
+    print("newton_motion.MotionController is deprecated. Use lantz.drivers.motion.MotionControllerMultiAxis instead")
 
 
-class MotionAxis(MotionController):
-    def __init__(self, parent, num, id, *args, **kwargs):
-        self.parent = parent
-        self.num = num
-        self._idn = id
-        self.wait_time = 0.01  # in seconds * Q_(1, 's')
-        self.backlash = 0
-        self.wait_until_done = True
-        self.accuracy = 0.001  # in units reported by axis
-        # Fill position cache:
-        self.position
-        self.last_set_position = self.position.magnitude
+UNITS = {0: 'encoder count',
+        1: 'motor step',
+        2: 'millimeter',
+        3: 'micrometer',
+        4: 'inches',
+        5: 'milli-inches',
+        6: 'micro-inches',
+        7: 'degree',
+        8: 'gradian',
+        9: 'radian',
+        10: 'milliradian',
+        11: 'microradian', }
 
+
+class MotionAxis(MotionAxisMultiple, BacklashMixing):
     def __del__(self):
         self.parent = None
         self.num = None
@@ -187,36 +115,6 @@ class MotionAxis(MotionController):
         # First do move to extra position if necessary
         self._set_position(pos, wait=self.wait_until_done)
 
-    @Action(units=['mm', None])
-    def _set_position(self, pos, wait=None):
-        """
-        Move to an absolute position, taking into account backlash.
-
-        When self.backlash is to a negative value the stage will always move
-         from low to high values. If necessary, a extra step with length
-         self.backlash is set.
-
-        :param pos: New position in mm
-        :param wait: wait until stage is finished
-        """
-
-        # First do move to extra position if necessary
-        if self.backlash:
-            position = self.position.magnitude
-            backlash = convert_to('mm', on_dimensionless='ignore'
-                                   )(self.backlash).magnitude
-            if (backlash < 0 and position > pos) or\
-               (backlash > 0 and position < pos):
-
-                self.log_info('Using backlash')
-                self.__set_position(pos + backlash)
-                self._wait_until_done()
-
-        # Than move to final position
-        self.__set_position(pos)
-        if wait:
-            self._wait_until_done()
-            self.check_position(pos)
 
     def __set_position(self, pos):
         """
@@ -225,17 +123,6 @@ class MotionAxis(MotionController):
         """
         self.write('PA%f' % (pos))
         self.last_set_position = pos
-
-    @Action(units='mm')
-    def check_position(self, pos):
-        '''Check is stage is at expected position'''
-        if np.isclose(self.position, pos, atol=self.accuracy):
-            return True
-        self.log_error('Position accuracy {} is not reached.'
-                       'Expected: {}, measured: {}'.format(self.accuracy,
-                                                           pos,
-                                                           self.position))
-        return False
 
     @Feat(units='mm/s')
     def max_velocity(self):
@@ -311,23 +198,13 @@ class MotionAxis(MotionController):
     @Feat()
     def units(self):
         ret = int(self.query(u'SN?'))
-        vals = {0 :'encoder count',
-                1 :'motor step',
-                2 :'millimeter',
-                3 :'micrometer',
-                4 :'inches',
-                5 :'milli-inches',
-                6 :'micro-inches',
-                7 :'degree',
-                8 :'gradian',
-                9 :'radian',
-                10:'milliradian',
-                11:'microradian',}
-        return vals[ret]
+        return UNITS[ret]
 
-    # @units.setter
-    # def units(self, val):
-    #     self.parent.write('%SN%' % (self.num, val))
+    @units.setter
+    def units(self, val):
+        # No check implemented yet
+        self.write('%SN%' % (self.num, UNITS.index(val)))
+        super().units = val
 
     def _wait_until_done(self):
         # wait_time = convert_to('seconds', on_dimensionless='warn')(self.wait_time)
