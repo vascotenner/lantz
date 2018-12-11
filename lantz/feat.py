@@ -66,7 +66,43 @@ def _dset(adict, value, instance=MISSING, key=MISSING):
         adict[instance][key] = value
 
 
-class Feat(object):
+class FeatActionUpdateModifiersMixing():
+    """
+    Adds functionality to a class to change its modifiers
+    """
+    def change_units(self, units=MISSING):
+        """Changes the units of a self"""
+        return self.change_modifiers( units=units)
+
+    def change_values(self, values=MISSING):
+        """Changes the values of a self"""
+        return self.change_modifiers( values=values)
+
+    def change_limits(self, limits=MISSING):
+        """Changes the values of a self"""
+        return self.change_modifiers( limits=limits)
+
+    def change_processors(self, processors=MISSING):
+        """Changes the values of a self"""
+        return self.change_modifiers( processors=processors)
+
+    def change_precision(self, precision=MISSING):
+        """Changes the values of a self"""
+        return self.change_modifiers(precision=precision)
+
+    def change_modifiers(self, **kwargs):
+        """Updates the modfieres of a self"""
+
+        # Keep self.modifiers and _get_processors in sync
+        modifiers = self.modifiers[MISSING][MISSING]
+        modifiers.update(kwargs)
+        print('Update', dict(modifiers))
+        retval = self.rebuild(build_doc=True, modifiers=modifiers, store=True)
+
+        print('After update', self.modifiers[MISSING][MISSING])
+
+
+class FeatBase(object):
     """Pimped Python property for interfacing with instruments. Can be used as
     a decorator.
 
@@ -332,6 +368,10 @@ class Feat(object):
         self.value[instance] = value
 
         getattr(instance, self.name + '_changed').emit(value, old_value)
+
+
+class Feat(FeatBase, FeatActionUpdateModifiersMixing):
+    pass
 
 
 class DictFeat(Feat):

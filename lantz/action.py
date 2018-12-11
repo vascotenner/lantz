@@ -20,7 +20,7 @@ from weakref import WeakKeyDictionary
 from .processors import (Processor, FromQuantityProcessor,
                          MapProcessor, RangeProcessor)
 
-from .feat import MISSING
+from .feat import MISSING, FeatActionUpdateModifiersMixing
 
 
 def _dget(adict, instance=MISSING):
@@ -46,7 +46,7 @@ def _dset(adict, value, instance=MISSING):
         adict[instance] = value
 
 
-class Action(object):
+class ActionBase(object):
     """Wraps a Driver method with Lantz. Can be used as a decorator.
 
     Processors can registered for each arguments to modify their values before
@@ -199,6 +199,10 @@ class Action(object):
             _dset(self.action_processors, procs, instance)
 
         return procs
+
+
+class Action(ActionBase, FeatActionUpdateModifiersMixing):
+    pass
 
 
 class ActionProxy(object):

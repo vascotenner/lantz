@@ -15,12 +15,14 @@ import threading
 from functools import wraps
 from concurrent import futures
 from collections import defaultdict
+import itertools
 
 from .utils.qt import MetaQObject, SuperQObject, QtCore
 from .feat import Feat, DictFeat, MISSING, FeatProxy
 from .action import Action, ActionProxy
 from .stats import RunningStats
 from .log import get_logger
+from . import Q_
 
 logger = get_logger('lantz.driver', False)
 
@@ -41,6 +43,17 @@ def _merge_dicts(*args):
         out.update(arg)
 
     return out
+
+def unit_to_string(units):
+    return str(Q_(units).units)
+
+def unit_replace(unit, old, new):
+    unit = unit.split(' ')
+    for i, part in enumerate(unit):
+        if part == old:
+            unit[i] = new
+
+    return ' '.join(unit)
 
 
 class MetaSelf(type):
@@ -465,6 +478,25 @@ class Driver(SuperQObject, metaclass=_DriverType):
     @property
     def actions(self):
         return Proxy(self, self._lantz_actions, ActionProxy)
+
+    def update_units(self, old_units, units):
+        """Updates the units of all feats and actions and actions from self.units to units.
+
+        E.g. mm/s -> radian.s
+
+        :param old_units: string or units
+        :param units: string or units
+        :return:
+        """
+
+        old_units_str = unit_to_string(old_units)
+        units_str = unit_to_string(units)
+
+        for featname, feat in itertools.chain(self.feats.items(), self.actions.items()):
+            old_feat_units_str = unit_to_string(feat.feat.modifiers[MISSING][MISSING]['units'])
+            new_feat_units = unit_replace(old_feat_units_str, old_units_str, units_str)
+            self.log_debug("Updating units of feat {} from {} to {}", featname, old_feat_units_str, new_feat_units)
+            feat.feat.change_units(units=new_feat_units)
 
 
 def _solve_dependencies(dependencies, all_members=None):
