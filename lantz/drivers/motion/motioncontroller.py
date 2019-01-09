@@ -34,6 +34,10 @@ class MotionControllerMultiAxis(Driver):
     """ Motion controller that can detect multiple axis
 
     """
+    def __init__(self, *args, **kw):
+        super().__init__(*args, **kw)
+        self.axes = []
+
     def initialize(self):
         super().initialize()
 

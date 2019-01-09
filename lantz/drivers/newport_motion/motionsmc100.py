@@ -295,7 +295,7 @@ class MotionAxisSMC100(MotionAxis):
     def _wait_until_done(self):
         er, st = self.status
         if st == 'MOVING.':
-            time.sleep(self.wait_time)
+            time.sleep(self.wait_time.m)
             return self._wait_until_done()
         elif st[:5] == 'READY':
             return True

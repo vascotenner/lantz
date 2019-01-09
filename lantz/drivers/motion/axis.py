@@ -29,10 +29,19 @@ import numpy as np
 
 class MotionAxisSingle(Driver):
     def __init__(self, *args, **kwargs):
-        self.wait_time = 0.01  # in seconds * Q_(1, 's')
-        self.wait_until_done = True
-        self.accuracy = 0.001  # in units reported by axis
-        self._units = 'mm'
+        self._config = {
+        'wait_time':  0.01,  # in seconds * Q_(1, 's')
+        'wait_until_done': True,
+        'accuracy': 0.001,  # in units reported by axis
+        'units': 'mm',
+        }
+
+        config_new = kwargs.pop('config', self._config)
+        super().__init__(*args, **kwargs)
+
+        if 'units' in config_new:
+            self.units = config_new['units']
+        self._config.update(config_new)
 
     @Feat()
     def idn(self):
@@ -45,11 +54,11 @@ class MotionAxisSingle(Driver):
     @position.setter
     def position(self, pos):
         """
-        Waits until movement is done if self.wait_until_done = True.
+        Waits until movement is done if self._config['wait_until_done'] = True.
 
         :param pos: new position
         """
-        self._set_position(pos, wait=self.wait_until_done)
+        self._set_position(pos, wait=self._config['wait_until_done'])
 
     @Action(units=['mm', None])
     def _set_position(self, pos, wait=None):
@@ -78,10 +87,18 @@ class MotionAxisSingle(Driver):
         """
         self.write('PA%f' % (pos))
 
+    @Feat(units='mm')
+    def accuracy(self):
+        return self._config['accuracy']
+
+    @accuracy.setter
+    def accuracy(self, val):
+        self._config['accuracy'] = val
+
     @Action(units='mm')
     def check_position(self, pos):
         '''Check is stage is at expected position'''
-        if np.isclose(self.position, pos, atol=self.accuracy):
+        if np.isclose(self.position, pos, atol=self.accuracy.m):
             return True
         self.log_error('Position accuracy {} is not reached.'
                        'Expected: {}, measured: {}'.format(self.accuracy,
@@ -96,15 +113,23 @@ class MotionAxisSingle(Driver):
 
     @Feat()
     def units(self):
-        return self._units
+        return self._config['units']
 
     @units.setter
     def units(self, units):
-        super().update_units(self._units, units)
-        self._units = units
+        super().update_units(self._config['units'], units)
+        self._config['units'] = units
+
+    @Feat(units='ms')
+    def wait_time(self):
+        return self._config['wait_time']
+
+    @wait_time.setter
+    def wait_time(self, val):
+        self._config['wait_time'] = val
 
     def _wait_until_done(self):
-        wait_time = convert_to('seconds', on_dimensionless='ignore')(self.wait_time)
+        wait_time = self.wait_time.m
         time.sleep(wait_time)
         while not self.motion_done:
             time.sleep(wait_time)
