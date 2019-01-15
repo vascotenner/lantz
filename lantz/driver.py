@@ -45,7 +45,7 @@ def _merge_dicts(*args):
     return out
 
 def unit_to_string(units):
-    return str(Q_(units).units)
+    return str(Q_(units).units) if units else ''
 
 def unit_replace(unit, old, new):
     unit = unit.split(' ')
@@ -493,10 +493,19 @@ class Driver(SuperQObject, metaclass=_DriverType):
         units_str = unit_to_string(units)
 
         for featname, feat in itertools.chain(self.feats.items(), self.actions.items()):
-            old_feat_units_str = unit_to_string(feat.feat.modifiers[MISSING][MISSING]['units'])
-            new_feat_units = unit_replace(old_feat_units_str, old_units_str, units_str)
-            self.log_debug("Updating units of feat {} from {} to {}", featname, old_feat_units_str, new_feat_units)
-            feat.feat.change_units(units=new_feat_units)
+            #print(featname, feat.feat.modifiers[MISSING][MISSING])
+            try:
+
+                if isinstance(feat.feat.modifiers[MISSING][MISSING]['units'], list):
+                    old_feat_units_str = [unit_to_string(unit) for unit in feat.feat.modifiers[MISSING][MISSING]['units']]
+                    new_feat_units = [unit_replace(old_feat_unit, old_units_str, units_str) for old_feat_unit in old_feat_units_str]
+                else:
+                    old_feat_units_str = unit_to_string(feat.feat.modifiers[MISSING][MISSING]['units'])
+                    new_feat_units = unit_replace(old_feat_units_str, old_units_str, units_str)
+                self.log_debug("Updating units of feat {} from {} to {}", featname, old_feat_units_str, new_feat_units)
+                feat.feat.change_units(units=new_feat_units)
+            except AttributeError:
+                self.log_debug("Not updating units of feat {} (no units)", featname)
 
 
 def _solve_dependencies(dependencies, all_members=None):

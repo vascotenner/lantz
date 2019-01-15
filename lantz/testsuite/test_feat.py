@@ -457,6 +457,21 @@ class FeatTest(unittest.TestCase):
         self.assertNotEqual(x.eggs, y.eggs)
         self.assertEqual(str(x.eggs.units), 'second')
 
+    def test_units_update(self):
+        class Spam(Driver):
+
+            @Feat(units='ms')
+            def eggs(self_):
+                return 9
+            @Feat(units=['ms', None])
+            def spam(self_):
+                return 9
+
+        x = Spam()
+        x.update_units('ms', 'km')
+        self.assertEqual(str(x.eggs.units), 'km')
+        self.assertEqual(str(x.eggs[0].units), 'km')
+        self.assertEqual(str(x.eggs[1].units), '')
 
 
 if __name__ == '__main__':
