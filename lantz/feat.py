@@ -311,7 +311,9 @@ class FeatBase(object):
             current_value = self.get_cache(instance, key)
             modifiers = _dget(self.modifiers, instance, key)
             precision = modifiers['precision']
-            if not force and (current_value is MISSING or
+
+            # Needs to update also when no value is known yet.
+            if not force and (current_value is not MISSING and
                               np.isclose(value, current_value, atol=precision)):
                 instance.log_info('No need to set {} = {} (current={}, force={}, precision={})', name, value, current_value, force, precision)
                 return

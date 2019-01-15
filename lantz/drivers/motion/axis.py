@@ -36,7 +36,7 @@ class MotionAxisSingle(Driver):
         'units': 'mm',
         }
 
-        config_new = kwargs.pop('config', self._config)
+        config_new = kwargs.pop('config', {})
         super().__init__(*args, **kwargs)
 
         if 'units' in config_new:
@@ -58,7 +58,8 @@ class MotionAxisSingle(Driver):
 
         :param pos: new position
         """
-        self._set_position(pos, wait=self._config['wait_until_done'])
+        wait = self.wait_time if self._config['wait_until_done'] else None
+        self._set_position(pos, wait=wait)
 
     @Action(units=['mm', None])
     def _set_position(self, pos, wait=None):
@@ -138,10 +139,10 @@ class MotionAxisSingle(Driver):
 
 class MotionAxisMultiple(MotionAxisSingle):
     def __init__(self, parent, num, id, *args, **kwargs):
-        super().__init__(*args, **kwargs)
         self.parent = parent
         self.num = num
         self._idn = id
+        super().__init__(*args, **kwargs)
 
     def __del__(self):
         self.parent = None

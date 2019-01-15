@@ -19,6 +19,7 @@ from lantz.action import Action
 from lantz.messagebased import MessageBasedDriver
 from pyvisa import constants
 from lantz import Q_, ureg
+from pint.errors import UndefinedUnitError
 from lantz.processors import convert_to
 from lantz.drivers.motion import MotionAxisMultiple, MotionControllerMultiAxis, BacklashMixing
 import time
@@ -42,13 +43,23 @@ UNITS = {0: 'encoder count',
         2: 'millimeter',
         3: 'micrometer',
         4: 'inches',
-        5: 'milli-inches',
-        6: 'micro-inches',
+        5: 'milliinches',
+        6: 'microinches',
         7: 'degree',
         8: 'gradian',
         9: 'radian',
         10: 'milliradian',
         11: 'microradian', }
+
+UNITS_inversed = {val: key for key, val in UNITS.items()}
+
+# for unit, number in list(UNITS.items()):
+#     try:
+#         unit_parsed = Q_(unit)
+#         del UNITS[unit]
+#         UNITS[unit_parsed.units] = number
+#     except UndefinedUnitError:
+#         pass
 
 
 class MotionAxis(MotionAxisMultiple, BacklashMixing):
@@ -113,8 +124,7 @@ class MotionAxis(MotionAxisMultiple, BacklashMixing):
             return
 
         # First do move to extra position if necessary
-        self._set_position(pos, wait=self.wait_until_done)
-
+        MotionAxisMultiple.position.__set__(self, pos)
 
     def __set_position(self, pos):
         """
@@ -203,8 +213,8 @@ class MotionAxis(MotionAxisMultiple, BacklashMixing):
     @units.setter
     def units(self, val):
         # No check implemented yet
-        self.write('%SN%' % (self.num, UNITS.index(val)))
-        super().units = val
+        self.write('%SN%' % (self.num, UNITS_inversed[val]))
+        MotionAxisMultiple.units.__set__(self, val)
 
     def _wait_until_done(self):
         # wait_time = convert_to('seconds', on_dimensionless='warn')(self.wait_time)
