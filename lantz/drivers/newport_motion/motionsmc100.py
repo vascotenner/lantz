@@ -106,7 +106,10 @@ class SMC100(MessageBasedDriver, MotionControllerMultiAxis):
     print(lantz.messagebased._resource_manager.list_resources())
     stage = SMC100('ASRL/dev/ttyUSB0::INSTR')
     stage.initialize()
+
     axis0 = stage.axes[0]
+    # After power-up, the axis should be homed before it can be moved!
+    # axis0.home()
     print('Axis id:' + axis0.idn)
     print('Axis position: {}'.format(axis0.position))
     axis0.keypad_disable()
