@@ -218,7 +218,7 @@ class ActionProxy(object):
         modifiers = _dget(self.action.modifiers, self.instance)
 
         if item not in modifiers:
-            raise AttributeError()
+            raise AttributeError('Modifier {} not found in {}', item, self)
 
         return modifiers[item]
 

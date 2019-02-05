@@ -126,7 +126,7 @@ class MotionAxis(MotionAxisMultiple, BacklashMixing):
         # First do move to extra position if necessary
         MotionAxisMultiple.position.__set__(self, pos)
 
-    def __set_position(self, pos):
+    def _write_position(self, pos):
         """
         Move stage to a certain position
         :param pos: New position

@@ -255,12 +255,12 @@ class MotionAxis(MotionAxisMultiple):
         if hold_time == -1:
             hold_time = self.default_hold_time.m
 
-        self.__set_position(pos, hold_time=hold_time)
+        self._write_position(pos, hold_time=hold_time)
         if wait:
             self._wait_until_done()
             self.check_position(pos)
 
-    def __set_position(self, pos, hold_time):
+    def _write_position(self, pos, hold_time):
         """
         Move stage to a certain position
         :param pos: New position

@@ -76,12 +76,12 @@ class MotionAxisSingle(Driver):
 
         # First do move to extra position if necessary
 
-        self.__set_position(pos)
+        self._write_position(pos)
         if wait:
             self._wait_until_done()
             self.check_position(pos)
 
-    def __set_position(self, pos):
+    def _write_position(self, pos):
         """
         Move stage to a certain position
         :param pos: New position
@@ -185,16 +185,16 @@ class BacklashMixing():
                (backlash > 0 and position < pos):
 
                 self.log_info('Using backlash')
-                self.__set_position(pos + backlash)
+                self._write_position(pos + backlash)
                 self._wait_until_done()
 
         # Than move to final position
-        self.__set_position(pos)
+        self._write_position(pos)
         if wait:
             self._wait_until_done()
             self.check_position(pos)
 
-    def __set_position(self, pos):
+    def _write_position(self, pos):
         """
         Move stage to a certain position
         :param pos: New position
