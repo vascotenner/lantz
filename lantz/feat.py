@@ -13,6 +13,7 @@
 import time
 import copy
 import numpy as np
+import numbers
 from weakref import WeakKeyDictionary
 
 from . import Q_
@@ -313,8 +314,11 @@ class FeatBase(object):
             precision = modifiers['precision']
 
             # Needs to update also when no value is known yet.
-            if not force and (current_value is not MISSING and
-                              np.isclose(value, current_value, atol=precision)):
+            if (not force
+                and current_value is not MISSING
+                and isinstance(value, (numbers.Number, Q_))
+                and np.isclose(value, current_value, atol=precision)
+            ):
                 instance.log_info('No need to set {} = {} (current={}, force={}, precision={})', name, value, current_value, force, precision)
                 return
 
