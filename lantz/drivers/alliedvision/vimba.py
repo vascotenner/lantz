@@ -26,6 +26,7 @@
 from lantz.driver import Driver
 from lantz import Feat, DictFeat, Action
 from pymba import Vimba
+import pymba
 import numpy as np
 import threading
 import time
@@ -33,10 +34,17 @@ import time
 
 beginner_controls = ['ExposureTimeAbs', 'GainRaw', 'Width', 'Height',
                      'OffsetX', 'OffsetY']
-aliases = {'exposure_time': 'ExposureTimeAbs',
-           'gain': 'GainRaw',
+aliases = {
+            'pixel_format': 'PixelFormat',
+            'gain': 'Gain',
           }
 
+# add all aliases to beginner_controls
+for val in aliases.values():
+    if val not in beginner_controls:
+        beginner_controls += [val]
+
+ignore_limits = ['OffsetX', 'OffsetY', 'Width', 'Height']
 
 def todict(listitems):
     'Helper function to create dicts usable in feats'
@@ -61,29 +69,19 @@ def attach_dyn_propr(instance, prop_name, propr):
 
 def create_getter(p):
     def tmpfunc(self):
-        return self.cam[p]
+        return self.cam.feature(p).value
     return tmpfunc
 
 
 def create_setter(p):
     def tmpfunc(self, val):
-        self.cam[p] = val
+        self.cam.feature(p).value = val
     return tmpfunc
 
 
 def list_cameras():
     with Vimba() as vimba:
-        # get system object
-        system = vimba.getSystem()
-
-        # list available cameras (after enabling discovery for GigE cameras)
-        if system.GeVTLIsPresent:
-            system.runFeatureCommand("GeVDiscoveryAllOnce")
-            time.sleep(0.2)
-        cameraIds = vimba.getCameraIds()
-        for cameraId in cameraIds:
-            print(cameraId)
-
+        return vimba.camera_ids()
 
 class VimbaCam(Driver):
 
@@ -94,36 +92,16 @@ class VimbaCam(Driver):
         :type camera_num: int, The camera device index: 0,1,..
         :type level: str, Level of controls to show ['beginner', 'expert']
 
-        Example:
-        import lantz
-        from lantz.drivers.alliedvision import Cam
-        import time
-        try:
-                lantzlog
-        except NameError:
-                lantzlog = lantz.log.log_to_screen(level=lantz.log.DEBUG)
-
-        cam = Cam(camera='Basler acA4112-8gm (40006341)')
-        cam.initialize()
-        cam.exposure_time
-        cam.exposure_time = 3010
-        cam.exposure_time
-        cam.grab_image()
-        print('Speedtest:')
-        nr = 10
-        start = time.time()
-        for n in range(nr):
-            cam.grab_image()
-            duration = (time.time()-start)*1000*lantz.Q_('ms')
-            print('Read {} images in {}. Reading alone took {}. Framerate {}'.format(nr,
-                duration, duration - nr* cam.exposure_time, nr / duration.to('s')))
-        cam.finalize()
+        Example is found in
+        lantz/drivers/alliedvision/tests/vimbatest.py
         """
         super().__init__(*args, **kwargs)
         self.camera = camera
         self.level = level
         # Some actions cannot be performed while reading
         self._grabbing_lock = threading.RLock()
+        self.frame = None
+        self.cam = None
 
     def initialize(self):
         """
@@ -134,49 +112,43 @@ class VimbaCam(Driver):
         self.vimba = Vimba()
         self.vimba.startup()
 
-        cameras = self.vimba.getCameraIds()
-        self.log_debug('Available cameras are:' + str(cameras))
-
-        try:
-            if isinstance(self.camera, int):
-                cam = cameras[self.camera]
-                self.cam = self.vimba.getCamera(cam)
-            else:
-                self.cam = self.vimba.getCamera(self.camera)
-        except RuntimeError as err:
-            self.log_error(err)
-            raise RuntimeError(err)
-
-        self.frame = self.cam.getFrame()
-        self.frame.announceFrame()
-        self.cam.startCapture()
+        self.cam = self.vimba.camera(self.camera)
+        self.cam.open()
 
         self._dynamically_add_properties()
         self._aliases()
-
-        # get rid of Mono12Packed and give a log error:
-        fmt = self.pixel_format
-        if fmt == str('Mono12Packed'):
-            self.log_error('PixelFormat {} not supported. Using Mono12 '
-                           'instead'.format(fmt))
-            self.pixel_format = 'Mono12'
 
         # Go to full available speed
         # cam.properties['DeviceLinkThroughputLimitMode'] = 'Off'
 
     def finalize(self):
-        self.cam.endCapture()
-        self.cam.revokeAllFrames()
+        #self.cam.revoke_all_frames()
+        self.cam.close()
+        self.vimba.shutdown()
         return
 
     def _dynamically_add_properties(self):
         """Add all properties available on driver as Feats"""
-        props = self.getFeatureNames() if self.level == 'expert' else beginner_controls
+        props = self.cam.feature_names() if self.level == 'expert' else beginner_controls
         for p in props:
-            info = self.cam.getFeatureInfo(p)
-            range_ = self.cam.getFeatureRange(p)
-            limits = range_ if isinstance(tuple, range_) else None
-            values = range_ if isinstance(list, range_) else None
+            feature = self.cam.feature(p)
+            info = feature.info
+            try:
+                value = feature.value
+                range_ = feature.range
+
+                # alternatively the feature value can be read as an object attribute
+                # value = getattr(camera, feature_name)
+                # or
+                # value = camera.someFeatureName
+
+            except pymba.VimbaException as e:
+                value = e
+                range_ = None
+
+            # Some limits are set dynamically. The current Feat cannot support this. Lets ignore the limits for those features
+            limits = range_ if isinstance(range_, tuple) and p not in ignore_limits else None
+            values = todict(range_) if isinstance(range_, list) else None
 
             feat = Feat(fget=create_getter(p),
                         fset=create_setter(p),
@@ -202,90 +174,102 @@ class VimbaCam(Driver):
 
     # Most properties are added automatically by _dynamically_add_properties
 
-    @Feat(values=todict(['Mono8', 'Mono12', 'Mono12Packed']))
-    def pixel_format(self):
-        fmt = self.cam['PixelFormat']
-        if fmt == 'Mono12Packed':
-            self.log_error('PixelFormat {} not supported. Use Mono12 instead'
-                           ''.format(fmt))
-        return fmt
+    # VimbaC does not report units for the exposure time, only mention us in description
+    @Feat(units='us')
+    def exposure_time(self):
+        return self.ExposureTimeAbs
 
-    @pixel_format.setter
-    def pixel_format(self, value):
-        if value == 'Mono12Packed':
-            self.log_error('PixelFormat {} not supported. Using Mono12 '
-                           'instead'.format(value))
-            value = 'Mono12'
-        self.cam['PixelFormat'] = value
+    @exposure_time.setter
+    def exposure_time(self, val):
+        print('Set expopsuretime to ', val)
+        self.ExposureTimeAbs = val
 
     @Feat()
     def properties(self):
         """Dict with all properties supported by pylon dll driver"""
-        return self.cam.getFeatureNames()
+        props = self.cam.feature_names()
+        return {p: self.cam.feature(p) for p in props}
 
     @Action()
     def list_properties(self):
         """List all properties and their values"""
-        for key in self.cam.getFeatureNames():
+        for key, feature in self.properties.items():
             try:
-                value = self.cam[key]
-            except IOError:
-                value = '<NOT READABLE>'
 
-            description = self.cam.getFeatureInfo(key)
-            range_ = self.cam.getFeatureRange(key)
+                range_ = feature.range
+                value = feature.value
+            except pymba.VimbaException as e:
+                value = e
+                range_ = None
+                #value = '<NOT READABLE>'
+            description = feature.info.description
+
             print('{0} ({1}):\t{2}\t{3}'.format(key, description, value, range_))
+
+    #@Action()
+    #def renew_frame(self):
+    #    '''Create a new frame buffer when the pxformat changes'''
+    #    pass
+        #self.cam.revoke_all_frames()
+        #self.frame = self.cam.create_frame()
+        #self.frame.announce()
 
     @Action(log_output=False)
     def grab_image(self):
         """Record a single image from the camera"""
-        self.cam.AcquisitionMode = 'SingleFrame'
-        try:
-            self.frame.queueFrameCapture()
-            success = True
-        except:
-            success = False
 
-        self.cam.runFeatureCommand('AcquisitionStart')
-        self.cam.runFeatureCommand('AcquisitionStop')
-        self.frame.waitFrameCapture(0)
-        frame_data = self.frame.getBufferByteData()
-        if success:
-            img_config = {
-                'buffer': frame_data,
-                'dtype': np.uint8,
-                'shape': (self.frame.height, self.frame.width, 1),
-            }
-            img = np.ndarray(**img_config)
-            return img[..., 0]
-        else:
-            return None
+        #self.renew_frame()  # It is faster to do this only once, but it has to be updated when some features changes,
+        #                    # including width,height, datatype
+        #self.cam.start_capture()
+
+        # self.cam.AcquisitionMode = 'Continuous'
+        #self.cam.AcquisitionMode = 'SingleFrame'
+
+
+
+        #try:
+        #    self.frame.queue_for_capture()
+        #    success = True
+        #except:
+        #    success = False
+
+        #self.cam.run_feature_command('AcquisitionStart')
+        #self.cam.run_feature_command('AcquisitionStop')
+        #self.frame.wait_for_capture()
+        #frame_data = self.frame.image_numpy_array()
+        #self.cam.end_capture()
+
+        self.cam.arm('SingleFrame')
+        frame = self.cam.acquire_frame()
+        self.cam.disarm()
+        image = frame.buffer_data_numpy()
+        return image
 
     @Action(log_output=False)
     def grab_images(self, num=1):
         # ΤΟDO see https://gist.github.com/npyoung/1c160c9eee91fd44c587
-        raise NotImplemented()
-        with self._grabbing_lock:
-            img = self.cam.grab_images(num)
-        return img
+        self.cam.arm('SingleFrame')
+        images = [self.cam.acquire_frame().buffer_data_numpy() for i in range(num)]
+        self.cam.disarm()
+        return images
 
     @Action(log_output=False)
     def getFrame(self):
         """Backward compatibility"""
-        return self.grab_image
+        return self.grab_image()
 
     @Action()
     def set_roi(self, height, width, yoffset, xoffset):
         # Validation:
-        if width + xoffset > self.properties['WidthMax']:
+        if width + xoffset > self.properties['WidthMax'].value:
             self.log_error('Not setting ROI:  Width + xoffset = {} exceeding '
                            'max width of camera {}.'.format(width + xoffset,
-                                                            self.properties['WidthMax']))
+                                                            self.properties['WidthMax'].value))
             return
-        if height + yoffset > self.properties['HeightMax']:
+        if height + yoffset > self.properties['HeightMax'].value:
             self.log_error('Not setting ROI: Height + yoffset = {} exceeding '
                            'max height of camera {}.'.format(height + yoffset,
-                                                             self.properties['HeightMax']))
+                                                             self.properties['HeightMax'].value))
             return
 
         # Offset should be multiple of 2:
@@ -304,8 +288,8 @@ class VimbaCam(Driver):
         with self._grabbing_lock:
             # Order matters!
             if self.OffsetY > yoffset:
-                self.Height = height
                 self.OffsetY = yoffset
+                self.Height = height
             else:
                 self.Height = height
                 self.OffsetY = yoffset
@@ -319,22 +303,22 @@ class VimbaCam(Driver):
     @Action()
     def reset_roi(self):
         """Sets ROI to maximum camera size"""
-        self.set_roi(self.properties['HeightMax'],
-                     self.properties['WidthMax'],
+        self.set_roi(self.properties['HeightMax'].value,
+                     self.properties['WidthMax'].value,
                      0,
                      0)
 
     # Helperfunctions for ROI settings
     def limit_width(self, dx):
-        if dx > self.properties['WidthMax']:
-            dx = self.properties['WidthMax']
+        if dx > self.properties['WidthMax'].value:
+            dx = self.properties['WidthMax'].value
         elif dx < 16:
             dx = 16
         return dx
 
     def limit_height(self, dy):
-        if dy > self.properties['HeightMax']:
-            dy = self.properties['HeightMax']
+        if dy > self.properties['HeightMax'].value:
+            dy = self.properties['HeightMax'].value
         elif dy < 16:
             dy = 16
         return dy
@@ -342,15 +326,15 @@ class VimbaCam(Driver):
     def limit_xoffset(self, xoffset, dx):
         if xoffset < 0:
             xoffset = 0
-        if xoffset + dx > self.properties['WidthMax']:
-            xoffset = self.properties['WidthMax'] - dx
+        if xoffset + dx > self.properties['WidthMax'].value:
+            xoffset = self.properties['WidthMax'].value - dx
         return xoffset
 
     def limit_yoffset(self, yoffset, dy):
         if yoffset < 0:
             yoffset = 0
-        if yoffset + dy > self.properties['HeightMax']:
-            yoffset = self.properties['HeightMax'] - dy
+        if yoffset + dy > self.properties['HeightMax'].value:
+            yoffset = self.properties['HeightMax'].value - dy
         return yoffset
 
     @Action()
