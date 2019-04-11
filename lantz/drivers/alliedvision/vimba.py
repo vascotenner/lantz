@@ -226,27 +226,6 @@ class VimbaCam(Driver):
     @Action(log_output=False)
     def grab_image(self):
         """Record a single image from the camera"""
-
-        #self.renew_frame()  # It is faster to do this only once, but it has to be updated when some features changes,
-        #                    # including width,height, datatype
-        #self.cam.start_capture()
-
-        # self.cam.AcquisitionMode = 'Continuous'
-        #self.cam.AcquisitionMode = 'SingleFrame'
-
-
-
-        #try:
-        #    self.frame.queue_for_capture()
-        #    success = True
-        #except:
-        #    success = False
-
-        #self.cam.run_feature_command('AcquisitionStart')
-        #self.cam.run_feature_command('AcquisitionStop')
-        #self.frame.wait_for_capture()
-        #frame_data = self.frame.image_numpy_array()
-        #self.cam.end_capture()
         with self._grabbing_lock:
             self.arm(mode='SingleFrame')
             image = self.grab_frame()
