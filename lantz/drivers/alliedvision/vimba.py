@@ -214,6 +214,15 @@ class VimbaCam(Driver):
         #self.frame = self.cam.create_frame()
         #self.frame.announce()
 
+    @Action()
+    def arm(self, mode='SingleFrame'):
+        """Prepare the camera to capture frames"""
+        self.cam.arm(mode)
+
+    @Action()
+    def disarm(self):
+        self.cam.disarm()
+
     @Action(log_output=False)
     def grab_image(self):
         """Record a single image from the camera"""
@@ -238,19 +247,25 @@ class VimbaCam(Driver):
         #self.frame.wait_for_capture()
         #frame_data = self.frame.image_numpy_array()
         #self.cam.end_capture()
+        with self._grabbing_lock:
+            self.arm(mode='SingleFrame')
+            image = self.grab_frame()
+            self.disarm()
+        return image
 
-        self.cam.arm('SingleFrame')
+    @Action(log_output=False)
+    def grab_frame(self):
+        """Grab a single frame and convert it to numpy array. Camera should be armed"""
         frame = self.cam.acquire_frame()
-        self.cam.disarm()
         image = frame.buffer_data_numpy()
         return image
 
     @Action(log_output=False)
     def grab_images(self, num=1):
-        # ΤΟDO see https://gist.github.com/npyoung/1c160c9eee91fd44c587
-        self.cam.arm('SingleFrame')
-        images = [self.cam.acquire_frame().buffer_data_numpy() for i in range(num)]
-        self.cam.disarm()
+        with self._grabbing_lock:
+            self.arm(mode='SingleFrame')
+            images = [self.grab_frame() for i in range(num)]
+            self.disarm()
         return images
 
     @Action(log_output=False)
