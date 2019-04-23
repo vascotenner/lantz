@@ -124,7 +124,6 @@ class VimbaCam(Driver):
     def finalize(self):
         #self.cam.revoke_all_frames()
         self.cam.close()
-        self.vimba.shutdown()
         return
 
     def _dynamically_add_properties(self):
@@ -217,11 +216,14 @@ class VimbaCam(Driver):
     @Action()
     def arm(self, mode='SingleFrame'):
         """Prepare the camera to capture frames"""
-        self.cam.arm(mode)
+        if not self.cam._is_armed:
+            self.cam.arm(mode)
 
     @Action()
     def disarm(self):
-        self.cam.disarm()
+        if self.cam._is_armed:
+            #self.cam.disarm()
+            pass
 
     @Action(log_output=False)
     def grab_image(self):
