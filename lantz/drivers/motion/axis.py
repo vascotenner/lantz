@@ -121,7 +121,7 @@ class MotionAxisSingle(Driver):
         super().update_units(self._config['units'], units)
         self._config['units'] = units
 
-    @Feat(units='ms')
+    @Feat(units='s')
     def wait_time(self):
         return self._config['wait_time']
 
