@@ -111,6 +111,7 @@ class Piezo(MessageBasedDriver):
                            'timeout': 20}, }
 
     def __init__(self, *args, **kwargs):
+        self._sleeptime_after_move = None
         self.sleeptime_after_move = kwargs.pop('sleeptime_after_move', 0*ureg.ms)
         self.axis = kwargs.pop('axis', 'X')
         super().__init__(*args, **kwargs)
@@ -176,6 +177,15 @@ class Piezo(MessageBasedDriver):
     def servo(self, state):
         self.write('SVO {} {}'.format(self.axis, state) )
         return self.errors
+
+    @Feat(units='ms')
+    def sleeptime_after_move(self):
+        return self._sleeptime_after_move
+
+    @sleeptime_after_move.setter
+    def sleeptime_after_move(self, val):
+        self._sleeptime_after_move = val
+
 
     @Feat(units='um/s')
     def velocity(self):
